@@ -431,24 +431,23 @@ export default class DuoMasterCompleter extends ReactUtils {
 			console.debug("Getting challenge elements... 📝");
 			const challengeElements = await this.getChallengeElements();
 
-			console.debug(challengeElements);
-
-			// Get the current challenge from the challenge elements
+			// If no challenge elements are found or that the current challenge is the same as the previous one
 			if (!challengeElements || 
 				(this.previousChallengeId && 
 					(
-						challengeElements.currentChallenge.id === this.previousChallengeId && 
-						!challengeElements.correctChallenges.filter(chal => chal.id === this.previousChallengeId).includes(this.currentChallenge)
+						challengeElements.currentChallenge.id === this.previousChallengeId && // Same as previous challenge
+						!challengeElements.correctChallenges.filter(chal => chal.id === this.previousChallengeId).includes(this.currentChallenge) // Verifies if the bot didn't fail it before, if it did, let's consider it as a new challenge
 					)
 				)
 			) {
 				this.currentChallenge = null;
 				console.debug("Current challenge is unavailable. 🚫");
+
+				// Tries to basically skip the screen, if it fails, it means the lesson might be finished
 				try {
 					// Autoskip or not, press the continue button so duolingo doesn't block on a message screen
 					await this.wait(this.humanFeel ? this.randomRange(500, 800) : this.robotSpeed);
-					const button = await this.pressContinueDuoLingo();
-					console.debug(button);
+					await this.pressContinueDuoLingo();
 					console.debug("Skipped duolingo motivation / ending screen. 🚫");
 
 					// Basically skips the challenge (even though this one didn't exist)
@@ -460,12 +459,14 @@ export default class DuoMasterCompleter extends ReactUtils {
 				}
 			}
 
+			// Challenge elements are found
 			this.currentChallenge = challengeElements.currentChallenge;
 
 			// Get the challenge type and proceed to complete it
 			const currentChallengeType = this.currentChallenge.type;
 			console.debug(`Current challenge: ${this.currentChallenge.type} 🎯`);
 
+			// Tries to complete the current challenge
 			try {
 				// Complete the current challenge
 				await this.completeChallenge(currentChallengeType);
@@ -488,6 +489,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 				await this.nextChallenge();
 				return resolve();
 			} catch (e) {
+				// An error occured, let's see which one and skip the challenge for the code to renew
 				if (e === "No continue button found.") console.debug(e, "Probably means the lesson's finished or the user left it. ⚠️");
 				if (e === "Unknown challenge type.") console.debug(e, "⚠️ (New challenge type?)", currentChallengeType);
 				return resolve();
