@@ -185,7 +185,27 @@ export default class DuoMasterCompleter extends ReactUtils {
 				});
 			},
 
-			name: () => { },
+			name: () => {
+				return new Promise(async (resolve) => {
+					// The input to put the translation in
+					const challengeTranslateInput = document.querySelector(
+						"[data-test='challenge-text-input']"
+					);
+
+					// The challenge solution
+					const solution = this.currentChallenge.correctSolutions[0];
+
+					// Types the words
+					await this.typeTranslationInput(
+						solution,
+						challengeTranslateInput
+					);
+
+					await this.pressContinueDuoLingo(true);
+					resolve();
+				});
+			},
+
 			form: () => { },
 			judge: () => { },
 			selectTranscription: () => { },
@@ -259,6 +279,8 @@ export default class DuoMasterCompleter extends ReactUtils {
 		// Get the stateNode props from the challenge elements
 		const challengeElements = document.querySelector(".mQ0GW")[prefix];
 		const stateNodeProps = challengeElements.return.return.stateNode.props;
+
+		console.debug(stateNodeProps);
 
 		// Return the stateNode props
 		return stateNodeProps;
