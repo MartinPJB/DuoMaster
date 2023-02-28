@@ -31,7 +31,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 
 		// Contains functions that are common to some of the challenges (So no copy-pasting)
 		this.commonChallenges = {
-			translateBlankTokens: () => {
+			translateBlankTokens: (contenteditable = false) => {
 				return new Promise(async (resolve) => {
 					// Get words that are blank
 					const wordsToComplete = this.currentChallenge.displayTokens
@@ -40,12 +40,12 @@ export default class DuoMasterCompleter extends ReactUtils {
 						.join(" ");
 
 					// Find the text input element
-					const challengeTextInput = document.querySelector(
-						"[data-test='challenge-text-input']"
-					);
+					const query = !contenteditable ? `[data-test='challenge-text-input']` : "[contenteditable=true]";
+					console.debug(query, contenteditable);
+					const challengeTranslateInput = document.querySelector(query);
 
 					// Type the words in the text input element
-					await this.typeTranslationInput(wordsToComplete, challengeTextInput);
+					await this.typeTranslationInput(wordsToComplete, challengeTranslateInput, contenteditable);
 
 					// Click on the continue button
 					await this.pressContinueDuoLingo(true);
@@ -53,6 +53,22 @@ export default class DuoMasterCompleter extends ReactUtils {
 					resolve();
 				});
 			},
+
+			translateText: (dataTestValue, solution) => {
+				return new Promise(async (resolve) => {
+					// The input to put the translation in
+					const challengeTranslateInput = document.querySelector(`[data-test='${dataTestValue}']`);
+
+					// Types the words
+					await this.typeTranslationInput(
+						solution,
+						challengeTranslateInput
+					);
+
+					await this.pressContinueDuoLingo(true);
+					resolve();
+				});
+			}
 		};
 
 		// Define the challenges and how to solve them
@@ -169,89 +185,16 @@ export default class DuoMasterCompleter extends ReactUtils {
 				});
 			},
 
-			listenComplete: this.commonChallenges.translateBlankTokens,
+			listenComplete: async () => { return await this.commonChallenges.translateBlankTokens() },
 
-			listen: () => {
-				return new Promise(async (resolve) => {
-					// The input to put the translation in
-					const challengeTranslateInput = document.querySelector(
-						"[data-test='challenge-translate-input']"
-					);
+			listen: async () => { return await this.commonChallenges.translateText("challenge-translate-input", this.currentChallenge.prompt) },
 
-					// The challenge solution
-					const solution = this.currentChallenge.prompt;
+			name: async () => { return await this.commonChallenges.translateText("challenge-text-input", this.currentChallenge.correctSolutions[0]) },
 
-					// Types the words
-					await this.typeTranslationInput(
-						solution,
-						challengeTranslateInput
-					);
-
-					await this.pressContinueDuoLingo(true);
-					resolve();
-				});
-			},
-
-			name: () => {
-				return new Promise(async (resolve) => {
-					// The input to put the translation in
-					const challengeTranslateInput = document.querySelector(
-						"[data-test='challenge-text-input']"
-					);
-
-					// The challenge solution
-					const solution = this.currentChallenge.correctSolutions[0];
-
-					// Types the words
-					await this.typeTranslationInput(
-						solution,
-						challengeTranslateInput
-					);
-
-					await this.pressContinueDuoLingo(true);
-					resolve();
-				});
-			},
-
-			completeReverseTranslation: this.commonChallenges.translateBlankTokens,
+			completeReverseTranslation: async () => { return await this.commonChallenges.translateBlankTokens() },
 
 			// Why did duolingo use a contenteditable span instead of an input on this 💀
-			partialReverseTranslate: () => {
-				return new Promise(async (resolve) => {
-					// Gets the "input" and creates an input event to dispatch (to trigger the button since it's a span)
-					const input = document.querySelector("[contenteditable=true]");
-					const event = new InputEvent("input", { bubbles: true });
-
-					// Get words that are blank
-					const wordsToComplete = this.currentChallenge.displayTokens
-						.filter((word) => word.isBlank)
-						.map((item) => item.text)
-						.join(" ");
-
-	
-					// Appends the text to the input
-					for (let i = 0; i < wordsToComplete.length; i++) {
-						// Gets the current text to append
-						const letter = wordsToComplete.slice(0, i + 1);
-	
-						// Appends the letter
-						input.innerText = letter;
-						input.dispatchEvent(event); // dispatch the event to trigger the button
-
-						// Move the text cursor to the end
-						input.selectionStart = input.innerText.length;
-						input.selectionEnd = input.innerText.length;
-	
-						// If "humanFeel" is enabled, adds a delay for a typewriting effect
-						if (this.humanFeel) {
-							await this.wait(this.randomRange(...this.humanTypeSpeedRange));
-						}
-					}
-	
-					// Resolves the promise to indicate the typing is done
-					resolve();
-				});
-			},
+			partialReverseTranslate: async () => { return await this.commonChallenges.translateBlankTokens(true) },
 
 			// form: () => { },
 			// judge: () => { },
@@ -349,22 +292,29 @@ export default class DuoMasterCompleter extends ReactUtils {
 	 * @returns {Promise<void>} - When the typing is complete
 	 */
 	// Returns a promise to be resolved when the typing is done
-	typeTranslationInput(translation, input) {
+	typeTranslationInput(translation, input, contenteditable = false) {
 		return new Promise(async (resolve) => {
 			// Finds the React Fiber node for the input element
 			const reactFiber = this.ReactFiber(input);
+			const event = new InputEvent("input", { bubbles: true }); // Won't be used if not in a contenteditable
 
 			// Appends the text to the input
 			for (let i = 0; i < translation.length; i++) {
 				// Gets the current text to append
 				const letter = translation.slice(0, i + 1);
 
-				// Simulates an "onChange" event on the input
-				reactFiber?.pendingProps?.onChange({
-					target: {
-						value: letter,
-					},
-				});
+				// Appends the letter
+				if (contenteditable) {
+					input.innerText = letter;
+					input.dispatchEvent(event); // dispatch the event to trigger the button
+				} else {
+					// Simulates an "onChange" event on the input
+					reactFiber?.pendingProps?.onChange({
+						target: {
+							value: letter,
+						},
+					});
+				}
 
 				// If "humanFeel" is enabled, adds a delay for a typewriting effect
 				if (this.humanFeel) {
