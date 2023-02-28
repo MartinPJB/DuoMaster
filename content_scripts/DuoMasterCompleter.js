@@ -88,8 +88,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 
 					// Translating type (wordbank / typing)
 					console.debug(
-						`Translating exercise type: ${challengeTranslateInput ? "Typing" : "Wordbank"
-						} ⚠️`
+						`Translating exercise type: ${challengeTranslateInput ? "Typing" : "Wordbank"} ⚠️`
 					);
 
 					// Wordbank
@@ -107,12 +106,9 @@ export default class DuoMasterCompleter extends ReactUtils {
 							).innerText
 						);
 
-						console.debug(stringChoices, this.currentChallenge.correctTokens);
-
 						// Clicks the correct tokens
 						for (const correctToken of this.currentChallenge.correctTokens) {
 							const index = stringChoices.indexOf(correctToken);
-							stringChoices.splice(index, 1);
 
 							if (choices[index]) {
 								choices[index]
