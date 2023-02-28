@@ -24,18 +24,20 @@ console.debug = debug;
 console.debug("DuoMaster has loaded. 🚀");
 
 // Main script
-function main() {
+async function main() {
 	// Check if the current page is a lesson page
 	if (settings.lessonPages.includes(settings.currentURL)) {
 		console.debug("Current page is a lesson page. 📖");
 		const completer = new DuoMasterCompleter({
-			humanFeel: true,
+			humanFeel: false,
+			robotSpeed: 500,
 			humanChooseSpeedRange: [500, 900],
 			humanTypeSpeedRange: [50, 300],
-			autoskip: true,
+			autoskip: false,
 		});
 
-		completer.start();
+		await completer.start();
+		console.debug("Lesson ended! 🎉");
 	}
 
 	return;

@@ -14,6 +14,9 @@ export default class DuoMasterCompleter extends ReactUtils {
 	constructor(...args) {
 		super();
 
+		// Define some variables
+		this.previousChallengeId = null;
+
 		// Get arguments
 		for (const arg of args) {
 			for (const key in arg) {
@@ -21,9 +24,13 @@ export default class DuoMasterCompleter extends ReactUtils {
 			}
 		}
 
+		// Set autoskip to true if humanFeel is false by default
+		if (!this.humanFeel) {
+			this.autoskip = true;
+		}
+
 		// Define the challenges and how to solve them
 		this.challenges = {
-			// ⚠️ buggy
 			listenMatch: () => {
 				return new Promise(async (resolve) => {
 					const pairs = this.currentChallenge.pairs;
@@ -37,7 +44,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 						// Find HTML elements matching the pair, with optional prefix
 						const htmlPair = [
 							...document.querySelectorAll(`[data-test="${translation}-challenge-tap-token${prefix ? ` ${prefix}` : ""}"]`),
-							...document.querySelectorAll(`${prefix ? `${prefix} ` : ""}[data-test="${translation}-challenge-tap-token"]`)
+							...document.querySelectorAll(`[data-test="${prefix ? `${prefix} ` : ""}${translation}-challenge-tap-token"]`)
 						];
 
 						// Clicks on the pair
@@ -67,8 +74,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 
 						// Waits between the ranges to give it a more "human" feel
 						if (this.humanFeel) {
-							const waitTime = this.randomRange(...this.humanChooseSpeedRange);
-							await this.wait(waitTime);
+							await this.wait(this.randomRange(...this.humanChooseSpeedRange));
 						}
 
 						await this.pressContinueDuoLingo(true);
@@ -120,8 +126,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 
 							// Waits between the ranges to give it a more "human" feel
 							if (this.humanFeel) {
-								const waitTime = this.randomRange(...this.humanChooseSpeedRange);
-								await this.wait(waitTime);
+								await this.wait(this.randomRange(...this.humanChooseSpeedRange));
 							}
 						}
 					} else {
@@ -233,15 +238,21 @@ export default class DuoMasterCompleter extends ReactUtils {
 	 * Starts the Autolingo Completer
 	 * @returns {Promise<void>} - Resolves when the page is loaded
 	 */
-	start() {
-		this.nextChallenge();
+	async start() {
+		// Wait for the page to load
+		console.debug("Waiting for page to load... ⏳");
+		await this.waitForChallengePageLoad();
+
+		// Page loaded
+		await this.nextChallenge();
+		return Promise.resolve();
 	}
 
 	/**
 	 * Waits for the page to load
 	 * @returns {Promise<Element>} - Resolves with the element that indicates the page has loaded
 	 */
-	waitForPageLoad() {
+	waitForChallengePageLoad() {
 		// Check if the loading indicator is already gone
 		if (document.querySelector(".mQ0GW")) {
 			// If it is, resolve the promise immediately with the loading indicator element
@@ -268,22 +279,26 @@ export default class DuoMasterCompleter extends ReactUtils {
 
 	/**
 	* Gets the challenge elements
-	* @returns {Object} - The challenge elements
+	* @returns {Promise} - The challenge elements
 	*/
 	getChallengeElements() {
-		// Find the prefix of the React Fiber node in the challenge elements
-		const prefix = Object.keys(document.querySelector(".mQ0GW")).find((e) =>
-			e.includes("__reactFiber$")
-		);
+		return new Promise((resolve) => {
+			try {
+				// Find the prefix of the React Fiber node in the challenge elements
+				const prefix = Object.keys(document.querySelector(".mQ0GW")).find((e) =>
+					e.includes("__reactFiber$")
+				);
 
-		// Get the stateNode props from the challenge elements
-		const challengeElements = document.querySelector(".mQ0GW")[prefix];
-		const stateNodeProps = challengeElements.return.return.stateNode.props;
+				// Get the stateNode props from the challenge elements
+				const challengeElements = document.querySelector(".mQ0GW")[prefix];
+				const stateNodeProps = challengeElements.return.return.stateNode.props;
 
-		console.debug(stateNodeProps);
-
-		// Return the stateNode props
-		return stateNodeProps;
+				// Return the stateNode props
+				return resolve(stateNodeProps);
+			} catch (e) {
+				return resolve(null);
+			}
+		});
 	}
 
 	/**
@@ -355,14 +370,19 @@ export default class DuoMasterCompleter extends ReactUtils {
 			try {
 				// If human-like, add a delay before completing the challenge
 				if (this.humanFeel) {
-					const delay = this.autoskip ? this.randomRange(800, 2000) : 500;
-					await this.wait(delay);
+					await this.wait(this.autoskip ? this.randomRange(800, 2000) : 500);
 				} else {
-					await this.wait(500);
+					await this.wait(this.robotSpeed);
 				}
+
+				if (!this.challenges[challengeType]) return reject("Invalid challenge type"); // Invalid challenge type
 
 				const completing = await this.challenges[challengeType](); // Complete the challenge
 				console.debug(`Completed challenge: ${this.currentChallenge.type} 🎉`);
+
+				// Resets the current challenge and keeps in mind the previous challenge id
+				this.previousChallengeId = this.currentChallenge.id;
+				this.currentChallenge = null;
 
 				resolve(completing);
 			} catch (e) {
@@ -377,15 +397,17 @@ export default class DuoMasterCompleter extends ReactUtils {
 	 * @returns {void}
 	 */
 	pressContinueDuoLingo(check) {
-		return new Promise(async (resolve) => {
+		return new Promise(async (resolve, reject) => {
 			const continueButton = document.querySelector("[data-test='player-next']");
+
+			if (!continueButton) return reject("No continue button found.");
 
 			// If the button exists and autoskip is on, click the button and resolve.
 			if (continueButton && this.autoskip) {
-				await this.wait(this.randomRange(500, 800));
+				await this.wait(this.humanFeel ? this.randomRange(500, 800) : this.robotSpeed);
 				continueButton.click();
 
-				resolve();
+				resolve(continueButton);
 				console.debug(!check ? "Pressed continue button. ✅" : "Pressed check button. 🧩");
 			}
 			// If the button doesn't exist or autoskip is off, resolve without clicking the button.
@@ -398,47 +420,79 @@ export default class DuoMasterCompleter extends ReactUtils {
 
 	/**
 	 * Completes the challenge and proceeds to the next one
-	 * @returns {Void}
+	 * @returns {Promise<void>}
 	 */
-	async nextChallenge() {
-		// Wait for the page to load
-		await this.waitForPageLoad();
+	nextChallenge() {
+		console.debug("--------------------");
+		console.debug("Next challenge... 🔄");
 
-		// Get the challenge elements
-		const challengeElements = this.getChallengeElements();
+		return new Promise(async (resolve) => {
+			// Get the challenge elements
+			console.debug("Getting challenge elements... 📝");
+			const challengeElements = await this.getChallengeElements();
 
-		// Get the current challenge from the challenge elements
-		this.currentChallenge = challengeElements.currentChallenge;
-		console.debug("Current challenge:", this.currentChallenge);
+			console.debug(challengeElements);
 
-		// Get the challenge type and proceed to complete it
-		const currentChallengeType = this.currentChallenge.type;
-		try {
-			// Complete the current challenge
-			await this.completeChallenge(currentChallengeType);
+			// Get the current challenge from the challenge elements
+			if (!challengeElements || 
+				(this.previousChallengeId && 
+					(
+						challengeElements.currentChallenge.id === this.previousChallengeId && 
+						!challengeElements.correctChallenges.filter(chal => chal.id === this.previousChallengeId).includes(this.currentChallenge)
+					)
+				)
+			) {
+				this.currentChallenge = null;
+				console.debug("Current challenge is unavailable. 🚫");
+				try {
+					// Autoskip or not, press the continue button so duolingo doesn't block on a message screen
+					await this.wait(this.humanFeel ? this.randomRange(500, 800) : this.robotSpeed);
+					const button = await this.pressContinueDuoLingo();
+					console.debug(button);
+					console.debug("Skipped duolingo motivation / ending screen. 🚫");
 
-			if (!this.humanFeel && this.autoskip) {
-				// Wait a bit before continuing to the next challenge
-				await this.wait(1000);
+					// Basically skips the challenge (even though this one didn't exist)
+					await this.nextChallenge();
+					return resolve();
+				} catch (e) {
+					console.debug("No continue button found, probably means the lesson's finished or the user left it. ⚠️");
+					return resolve();
+				}
 			}
 
-			// Press the continue button to proceed to the next challenge
-			if (this.autoskip) {
-				await this.pressContinueDuoLingo();
+			this.currentChallenge = challengeElements.currentChallenge;
+
+			// Get the challenge type and proceed to complete it
+			const currentChallengeType = this.currentChallenge.type;
+			console.debug(`Current challenge: ${this.currentChallenge.type} 🎯`);
+
+			try {
+				// Complete the current challenge
+				await this.completeChallenge(currentChallengeType);
+
+				if (!this.humanFeel && this.autoskip) {
+					// Wait a bit before continuing to the next challenge
+					await this.wait(this.robotSpeed);
+				}
+
+				// Press the continue button to proceed to the next challenge
+				console.debug("Waiting for next challenge... 🕑");
+
+				// Wait for the next challenge to appear
+				if (this.autoskip) await this.pressContinueDuoLingo();
+				await this.waitForNextChallenge();
+
+				console.debug("Continuing to next challenge... 🚀");
+
+				// Start the next challenge
+				await this.nextChallenge();
+				return resolve();
+			} catch (e) {
+				if (e === "No continue button found.") console.debug(e, "Probably means the lesson's finished or the user left it. ⚠️");
+				if (e === "Unknown challenge type.") console.debug(e, "⚠️ (New challenge type?)", currentChallengeType);
+				return resolve();
 			}
-
-			console.debug("Waiting for next challenge... 🕑");
-
-			// Wait for the next challenge to appear
-			await this.waitForNextChallenge();
-
-			console.debug("Continuing to next challenge... 🚀");
-
-			// Start the next challenge
-			return this.nextChallenge();
-		} catch (e) {
-			console.debug("ERROR> An error occurred:", e);
-		}
+		});
 	}
 
 	/**
@@ -446,15 +500,15 @@ export default class DuoMasterCompleter extends ReactUtils {
 	 * @returns {Promise<Element>} - Resolves with the element that indicates the page has loaded
 	 */
 	waitForNextChallenge() {
+		if (!this.currentChallenge) return;
 		return new Promise((resolve) => {
 			// Create a mutation observer to watch for changes in the document
-			const observer = new MutationObserver((mutations) => {
+			const observer = new MutationObserver(async (mutations) => {
 				// Get the current challenge elements
 				const challengeElements = this.getChallengeElements();
 
 				// Get the current supposed challenge
 				const supposedCurrentChallenge = challengeElements.currentChallenge;
-				console.debug(supposedCurrentChallenge);
 
 				// Check if the supposed current challenge is not the same as the current challenge or it does not exist
 				if (
@@ -465,6 +519,17 @@ export default class DuoMasterCompleter extends ReactUtils {
 					observer.disconnect();
 					resolve();
 					return;
+				} else {
+					// Tries clicking on the next button in case Duolingo is being motivational
+					if (this.autoskip) {
+						try {
+							await this.pressContinueDuoLingo();
+							console.debug("Duolingo was being motivational 🙄");
+							resolve();
+						} catch (e) {
+							console.debug("Couldn't press continue button. 🤷‍♂️");
+						}
+					}
 				}
 			});
 
