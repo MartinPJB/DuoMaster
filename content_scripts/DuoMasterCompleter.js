@@ -29,81 +29,107 @@ export default class DuoMasterCompleter extends ReactUtils {
 			this.autoskip = true;
 		}
 
+		// Contains functions that are common to some of the challenges (So no copy-pasting)
+		this.commonChallenges = {
+			translateBlankTokens: () => {
+				return new Promise(async (resolve) => {
+					// Get words that are blank
+					const wordsToComplete = this.currentChallenge.displayTokens
+						.filter((word) => word.isBlank)
+						.map((item) => item.text)
+						.join(" ");
+		
+					// Find the text input element
+					const challengeTextInput = document.querySelector(
+						"[data-test='challenge-text-input']"
+					);
+		
+					// Type the words in the text input element
+					await this.typeTranslationInput(wordsToComplete, challengeTextInput);
+		
+					// Click on the continue button
+					await this.pressContinueDuoLingo(true);
+		
+					resolve();
+				});
+			},
+		};
+
 		// Define the challenges and how to solve them
 		this.challenges = {
 			listenMatch: () => {
 				return new Promise(async (resolve) => {
 					const pairs = this.currentChallenge.pairs;
-
+		
 					// Selects the pairs
 					for (const pair of pairs) {
 						const toArray = pair.translation.split(" ");
 						const prefix = toArray.length > 1 ? toArray.shift() : "";
 						const translation = toArray.join("-");
-
+		
 						// Find HTML elements matching the pair, with optional prefix
 						const htmlPair = [
 							...document.querySelectorAll(`[data-test="${translation}-challenge-tap-token${prefix ? ` ${prefix}` : ""}"]`),
 							...document.querySelectorAll(`[data-test="${prefix ? `${prefix} ` : ""}${translation}-challenge-tap-token"]`)
 						];
-
+		
 						// Clicks on the pair
 						for (const element of htmlPair) {
 							element.click();
-
+		
 							// Waits between the ranges to give it a more "human" feel
 							if (this.humanFeel) {
 								await this.wait(this.randomRange(...this.humanChooseSpeedRange));
 							}
 						}
 					}
-
+		
 					// Resolves the promise
 					resolve();
 				});
 			},
-
+		
 			assist: () => {
 				return new Promise(async (resolve) => {
 					const correctIndex = this.currentChallenge.correctIndex;
-
+		
 					// Selects the correct choice
 					const htmlChoices = document.querySelectorAll('[data-test="challenge-choice"]');
 					if (htmlChoices[correctIndex]) {
 						htmlChoices[correctIndex].click();
-
+		
 						// Waits between the ranges to give it a more "human" feel
 						if (this.humanFeel) {
 							await this.wait(this.randomRange(...this.humanChooseSpeedRange));
 						}
-
+		
 						await this.pressContinueDuoLingo(true);
 					}
-
+		
 					// Done!
 					resolve();
 				});
 			},
-
+		
 			translate: () => {
 				return new Promise(async (resolve) => {
 					// The input to put the translation in
 					const challengeTranslateInput = document.querySelector(
 						"[data-test='challenge-translate-input']"
 					);
-
+		
 					// Translating type (wordbank / typing)
 					console.debug(
 						`Translating exercise type: ${challengeTranslateInput ? "Typing" : "Wordbank"} ⚠️`
 					);
-
+		
 					// Wordbank
 					if (!challengeTranslateInput) {
 						// Select the word bank
 						const wordBank = document.querySelector(
 							"[data-test='word-bank']"
 						);
-
+		
 						// Collect all the choices
 						const choices = Array.from(wordBank.children);
 						const stringChoices = choices.map(choice =>
@@ -111,11 +137,11 @@ export default class DuoMasterCompleter extends ReactUtils {
 								"[data-test='challenge-tap-token-text']"
 							).innerText
 						);
-
+		
 						// Clicks the correct tokens
 						for (const correctToken of this.currentChallenge.correctTokens) {
 							const index = stringChoices.indexOf(correctToken);
-
+		
 							if (choices[index]) {
 								choices[index]
 									.querySelector(
@@ -123,7 +149,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 									)
 									?.click();
 							}
-
+		
 							// Waits between the ranges to give it a more "human" feel
 							if (this.humanFeel) {
 								await this.wait(this.randomRange(...this.humanChooseSpeedRange));
@@ -137,100 +163,80 @@ export default class DuoMasterCompleter extends ReactUtils {
 							challengeTranslateInput
 						);
 					}
-
+		
 					// Press continue button
 					await this.pressContinueDuoLingo(true);
-
+		
 					// Done!
 					resolve();
 				});
 			},
-
-			listenComplete: () => {
-				return new Promise(async (resolve) => {
-					// Get words that are blank
-					const wordsToComplete = this.currentChallenge.displayTokens
-						.filter((word) => word.isBlank)
-						.map((item) => item.text)
-						.join(" ");
-
-					// Find the text input element
-					const challengeTextInput = document.querySelector(
-						"[data-test='challenge-text-input']"
-					);
-
-					// Type the words in the text input element
-					await this.typeTranslationInput(wordsToComplete, challengeTextInput);
-
-					// Click on the continue button
-					await this.pressContinueDuoLingo(true);
-
-					resolve();
-				});
-			},
-
+		
+			listenComplete: this.commonChallenges.translateBlankTokens,
+		
 			listen: () => {
 				return new Promise(async (resolve) => {
 					// The input to put the translation in
 					const challengeTranslateInput = document.querySelector(
 						"[data-test='challenge-translate-input']"
 					);
-
+		
 					// The challenge solution
 					const solution = this.currentChallenge.prompt;
-
+		
 					// Types the words
 					await this.typeTranslationInput(
 						solution,
 						challengeTranslateInput
 					);
-
+		
 					await this.pressContinueDuoLingo(true);
 					resolve();
 				});
 			},
-
+		
 			name: () => {
 				return new Promise(async (resolve) => {
 					// The input to put the translation in
 					const challengeTranslateInput = document.querySelector(
 						"[data-test='challenge-text-input']"
 					);
-
+		
 					// The challenge solution
 					const solution = this.currentChallenge.correctSolutions[0];
-
+		
 					// Types the words
 					await this.typeTranslationInput(
 						solution,
 						challengeTranslateInput
 					);
-
+		
 					await this.pressContinueDuoLingo(true);
 					resolve();
 				});
 			},
-
-			form: () => { },
-			judge: () => { },
-			selectTranscription: () => { },
-			characterIntro: () => { },
-			selectPronunciation: () => { },
-			completeReverseTranslation: () => { },
-			listenTap: () => { },
-			tapCompleteTable: () => { },
-			typeCompleteTable: () => { },
-			typeCloze: () => { },
-			typeClozeTable: () => { },
-			tapClozeTable: () => { },
-			tapCloze: () => { },
-			tapComplete: () => { },
-			listenComprehension: () => { },
-			dialogue: () => { },
-			speak: () => { },
-			match: () => { },
-			characterTrace: () => { },
-			partialReverseTranslate: () => { },
+		
+			completeReverseTranslation: this.commonChallenges.translateBlankTokens,
+		
+			// form: () => { },
+			// judge: () => { },
+			// selectTranscription: () => { },
+			// characterIntro: () => { },
+			// selectPronunciation: () => { },
+			// listenTap: () => { },
+			// tapCompleteTable: () => { },
+			// typeCompleteTable: () => { },
+			// typeCloze: () => { },
+			// typeClozeTable: () => { },
+			// tapClozeTable: () => { },
+			// tapCloze: () => { },
+			// tapComplete: () => { },
+			// listenComprehension: () => { },
+			// dialogue: () => { },
+			// speak: () => { },
+			// match: () => { },
+			// characterTrace: () => { },
+			// partialReverseTranslate: () => { },
 		};
 	}
 
@@ -431,9 +437,11 @@ export default class DuoMasterCompleter extends ReactUtils {
 			console.debug("Getting challenge elements... 📝");
 			const challengeElements = await this.getChallengeElements();
 
+			console.debug(challengeElements);
+
 			// If no challenge elements are found or that the current challenge is the same as the previous one
-			if (!challengeElements || 
-				(this.previousChallengeId && 
+			if (!challengeElements ||
+				(this.previousChallengeId &&
 					(
 						challengeElements.currentChallenge.id === this.previousChallengeId && // Same as previous challenge
 						!challengeElements.correctChallenges.filter(chal => chal.id === this.previousChallengeId).includes(this.currentChallenge) // Verifies if the bot didn't fail it before, if it did, let's consider it as a new challenge
