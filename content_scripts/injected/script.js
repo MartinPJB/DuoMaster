@@ -31,7 +31,7 @@ async function main() {
 	if (settings.lessonPages.includes(settings.currentURL)) {
 		console.debug("Current page is a lesson page. 📖");
 		const completer = new DuoMasterCompleter({
-			humanFeel: false,
+			humanFeel: true,
 			robotSpeed: 500,
 			humanChooseSpeedRange: [500, 900],
 			humanTypeSpeedRange: [50, 300],

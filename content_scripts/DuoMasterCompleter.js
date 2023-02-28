@@ -38,18 +38,18 @@ export default class DuoMasterCompleter extends ReactUtils {
 						.filter((word) => word.isBlank)
 						.map((item) => item.text)
 						.join(" ");
-		
+
 					// Find the text input element
 					const challengeTextInput = document.querySelector(
 						"[data-test='challenge-text-input']"
 					);
-		
+
 					// Type the words in the text input element
 					await this.typeTranslationInput(wordsToComplete, challengeTextInput);
-		
+
 					// Click on the continue button
 					await this.pressContinueDuoLingo(true);
-		
+
 					resolve();
 				});
 			},
@@ -60,76 +60,76 @@ export default class DuoMasterCompleter extends ReactUtils {
 			listenMatch: () => {
 				return new Promise(async (resolve) => {
 					const pairs = this.currentChallenge.pairs;
-		
+
 					// Selects the pairs
 					for (const pair of pairs) {
 						const toArray = pair.translation.split(" ");
 						const prefix = toArray.length > 1 ? toArray.shift() : "";
 						const translation = toArray.join("-");
-		
+
 						// Find HTML elements matching the pair, with optional prefix
 						const htmlPair = [
 							...document.querySelectorAll(`[data-test="${translation}-challenge-tap-token${prefix ? ` ${prefix}` : ""}"]`),
 							...document.querySelectorAll(`[data-test="${prefix ? `${prefix} ` : ""}${translation}-challenge-tap-token"]`)
 						];
-		
+
 						// Clicks on the pair
 						for (const element of htmlPair) {
 							element.click();
-		
+
 							// Waits between the ranges to give it a more "human" feel
 							if (this.humanFeel) {
 								await this.wait(this.randomRange(...this.humanChooseSpeedRange));
 							}
 						}
 					}
-		
+
 					// Resolves the promise
 					resolve();
 				});
 			},
-		
+
 			assist: () => {
 				return new Promise(async (resolve) => {
 					const correctIndex = this.currentChallenge.correctIndex;
-		
+
 					// Selects the correct choice
 					const htmlChoices = document.querySelectorAll('[data-test="challenge-choice"]');
 					if (htmlChoices[correctIndex]) {
 						htmlChoices[correctIndex].click();
-		
+
 						// Waits between the ranges to give it a more "human" feel
 						if (this.humanFeel) {
 							await this.wait(this.randomRange(...this.humanChooseSpeedRange));
 						}
-		
+
 						await this.pressContinueDuoLingo(true);
 					}
-		
+
 					// Done!
 					resolve();
 				});
 			},
-		
+
 			translate: () => {
 				return new Promise(async (resolve) => {
 					// The input to put the translation in
 					const challengeTranslateInput = document.querySelector(
 						"[data-test='challenge-translate-input']"
 					);
-		
+
 					// Translating type (wordbank / typing)
 					console.debug(
 						`Translating exercise type: ${challengeTranslateInput ? "Typing" : "Wordbank"} ⚠️`
 					);
-		
+
 					// Wordbank
 					if (!challengeTranslateInput) {
 						// Select the word bank
 						const wordBank = document.querySelector(
 							"[data-test='word-bank']"
 						);
-		
+
 						// Collect all the choices
 						const choices = Array.from(wordBank.children);
 						const stringChoices = choices.map(choice =>
@@ -137,19 +137,16 @@ export default class DuoMasterCompleter extends ReactUtils {
 								"[data-test='challenge-tap-token-text']"
 							).innerText
 						);
-		
+
 						// Clicks the correct tokens
 						for (const correctToken of this.currentChallenge.correctTokens) {
 							const index = stringChoices.indexOf(correctToken);
-		
+
 							if (choices[index]) {
-								choices[index]
-									.querySelector(
-										"[data-test='challenge-tap-token-text']"
-									)
-									?.click();
+								choices[index].querySelector("[data-test='challenge-tap-token-text']")?.click();
+								stringChoices[index] = ""; // Remove the choice so it can't be selected again (avoid bugs)
 							}
-		
+
 							// Waits between the ranges to give it a more "human" feel
 							if (this.humanFeel) {
 								await this.wait(this.randomRange(...this.humanChooseSpeedRange));
@@ -163,61 +160,99 @@ export default class DuoMasterCompleter extends ReactUtils {
 							challengeTranslateInput
 						);
 					}
-		
+
 					// Press continue button
 					await this.pressContinueDuoLingo(true);
-		
+
 					// Done!
 					resolve();
 				});
 			},
-		
+
 			listenComplete: this.commonChallenges.translateBlankTokens,
-		
+
 			listen: () => {
 				return new Promise(async (resolve) => {
 					// The input to put the translation in
 					const challengeTranslateInput = document.querySelector(
 						"[data-test='challenge-translate-input']"
 					);
-		
+
 					// The challenge solution
 					const solution = this.currentChallenge.prompt;
-		
+
 					// Types the words
 					await this.typeTranslationInput(
 						solution,
 						challengeTranslateInput
 					);
-		
+
 					await this.pressContinueDuoLingo(true);
 					resolve();
 				});
 			},
-		
+
 			name: () => {
 				return new Promise(async (resolve) => {
 					// The input to put the translation in
 					const challengeTranslateInput = document.querySelector(
 						"[data-test='challenge-text-input']"
 					);
-		
+
 					// The challenge solution
 					const solution = this.currentChallenge.correctSolutions[0];
-		
+
 					// Types the words
 					await this.typeTranslationInput(
 						solution,
 						challengeTranslateInput
 					);
-		
+
 					await this.pressContinueDuoLingo(true);
 					resolve();
 				});
 			},
-		
+
 			completeReverseTranslation: this.commonChallenges.translateBlankTokens,
-		
+
+			// Why did duolingo use a contenteditable span instead of an input on this 💀
+			partialReverseTranslate: () => {
+				return new Promise(async (resolve) => {
+					// Gets the "input" and creates an input event to dispatch (to trigger the button since it's a span)
+					const input = document.querySelector("[contenteditable=true]");
+					const event = new InputEvent("input", { bubbles: true });
+
+					// Get words that are blank
+					const wordsToComplete = this.currentChallenge.displayTokens
+						.filter((word) => word.isBlank)
+						.map((item) => item.text)
+						.join(" ");
+
+	
+					// Appends the text to the input
+					for (let i = 0; i < wordsToComplete.length; i++) {
+						// Gets the current text to append
+						const letter = wordsToComplete.slice(0, i + 1);
+	
+						// Appends the letter
+						input.innerText = letter;
+						input.dispatchEvent(event); // dispatch the event to trigger the button
+
+						// Move the text cursor to the end
+						input.selectionStart = input.innerText.length;
+						input.selectionEnd = input.innerText.length;
+	
+						// If "humanFeel" is enabled, adds a delay for a typewriting effect
+						if (this.humanFeel) {
+							await this.wait(this.randomRange(...this.humanTypeSpeedRange));
+						}
+					}
+	
+					// Resolves the promise to indicate the typing is done
+					resolve();
+				});
+			},
+
 			// form: () => { },
 			// judge: () => { },
 			// selectTranscription: () => { },
@@ -500,6 +535,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 				// An error occured, let's see which one and skip the challenge for the code to renew
 				if (e === "No continue button found.") console.debug(e, "Probably means the lesson's finished or the user left it. ⚠️");
 				if (e === "Unknown challenge type.") console.debug(e, "⚠️ (New challenge type?)", currentChallengeType);
+				console.debug("ERROR: ", e);
 				return resolve();
 			}
 		});
