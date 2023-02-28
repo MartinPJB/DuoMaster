@@ -14,6 +14,9 @@ export default class DuoMasterCompleter extends ReactUtils {
 	constructor(...args) {
 		super();
 
+		// Define some variables
+		this.previousChallengeId = null;
+
 		// Get arguments
 		for (const arg of args) {
 			for (const key in arg) {
@@ -21,186 +24,40 @@ export default class DuoMasterCompleter extends ReactUtils {
 			}
 		}
 
-		// Define the challenges and how to solve them
-		this.challenges = {
-			// ⚠️ buggy
-			listenMatch: () => {
-				return new Promise(async (resolve, reject) => {
-					const pairs = this.currentChallenge.pairs;
+		// Set autoskip to true if humanFeel is false by default
+		if (!this.humanFeel) {
+			this.autoskip = true;
+		}
 
-					// Selects the pairs
-					for (const pair of pairs) {
-						let toArray = pair.translation.split(" ");
-						let prefix = "";
-						if (toArray.length > 1) prefix = toArray.shift();
-						let translation = toArray.join("-");
-
-						// Prefix can be of two types for some reasons 💀
-						const htmlPair =
-							document.querySelectorAll(
-								`[data-test="${translation}-challenge-tap-token${
-									prefix ? ` ${prefix}` : ""
-								}"]`
-							) ||
-							document.querySelectorAll(
-								`${
-									prefix ? `${prefix} ` : ""
-								}[data-test="${translation}-challenge-tap-token"]`
-							);
-
-						// Clicks on the pair
-						for (const element of htmlPair) {
-							element.click();
-
-							// Waits between the ranges to give it a more "human" feel
-							if (this.humanFeel) {
-								await this.wait(
-									this.randomRange(
-										this.humanChooseSpeedRange[0],
-										this.humanChooseSpeedRange[1]
-									)
-								);
-							}
-						}
-					}
-
-					// Done!
-					resolve();
-				});
-			},
-
-			assist: () => {
-				return new Promise(async (resolve, reject) => {
-					const correctIndex = this.currentChallenge.correctIndex;
-
-					// Selects the correct choice
-					const htmlChoices = document.querySelectorAll(
-						'[data-test="challenge-choice"]'
-					);
-					if (htmlChoices[correctIndex]) {
-						htmlChoices[correctIndex].click();
-
-						// Waits between the ranges to give it a more "human" feel
-						if (this.humanFeel) {
-							await this.wait(
-								this.randomRange(
-									this.humanChooseSpeedRange[0],
-									this.humanChooseSpeedRange[1]
-								)
-							);
-						}
-
-						await this.pressContinueDuoLingo(true);
-
-						// Done!
-						resolve();
-					}
-				});
-			},
-
-			translate: () => {
-				return new Promise(async (resolve, reject) => {
-					// The input to put the translation in
-					const challengeTranslateInput = document.querySelector(
-						"[data-test='challenge-translate-input']"
-					);
-
-					// Translating type (wordbank / typing)
-					console.debug(
-						`Translating exercise type: ${
-							challengeTranslateInput ? "Typing" : "Wordbank"
-						} ⚠️`
-					);
-
-					// Wordbank
-					if (!challengeTranslateInput) {
-						let wordBank = document.querySelector(
-							"[data-test='word-bank']"
-						);
-						let choices = Array.from(wordBank.children);
-						let stringChoices = [];
-
-						// Choices
-						for (const choice of choices) {
-							stringChoices.push(
-								choice.querySelector(
-									"[data-test='challenge-tap-token-text']"
-								).innerText
-							);
-						}
-
-						// Clicks the correct tokens
-						for (const correctToken of this.currentChallenge
-							.correctTokens) {
-							const index = stringChoices.indexOf(correctToken);
-							stringChoices.slice(index, 1);
-
-							if (choices[index]) {
-								choices[index]
-									.querySelector(
-										"[data-test='challenge-tap-token-text']"
-									)
-									?.click();
-							}
-
-							// Waits between the ranges to give it a more "human" feel
-							if (this.humanFeel) {
-								await this.wait(
-									this.randomRange(
-										this.humanChooseSpeedRange[0],
-										this.humanChooseSpeedRange[1]
-									)
-								);
-							}
-						}
-					} else {
-						const correctTranslation =
-							this.currentChallenge.correctSolutions[0];
-
-						// Type the correct translation
-						await this.typeTranslationInput(
-							correctTranslation,
-							challengeTranslateInput
-						);
-					}
-
-					await this.pressContinueDuoLingo(true);
-					resolve();
-				});
-			},
-
-			listenComplete: () => {
-				return new Promise(async (resolve, reject) => {
-					// Words that are blank
+		// Contains functions that are common to some of the challenges (So no copy-pasting)
+		this.commonChallenges = {
+			translateBlankTokens: (contenteditable = false) => {
+				return new Promise(async (resolve) => {
+					// Get words that are blank
 					const wordsToComplete = this.currentChallenge.displayTokens
 						.filter((word) => word.isBlank)
 						.map((item) => item.text)
 						.join(" ");
 
-					const challengeTextInput = document.querySelector(
-						"[data-test='challenge-text-input']"
-					);
+					// Find the text input element
+					const query = !contenteditable ? `[data-test='challenge-text-input']` : "[contenteditable=true]";
+					console.debug(query, contenteditable);
+					const challengeTranslateInput = document.querySelector(query);
 
-					// Types the words
-					await this.typeTranslationInput(
-						wordsToComplete,
-						challengeTextInput
-					);
+					// Type the words in the text input element
+					await this.typeTranslationInput(wordsToComplete, challengeTranslateInput, contenteditable);
 
+					// Click on the continue button
 					await this.pressContinueDuoLingo(true);
+
 					resolve();
 				});
 			},
 
-			listen: () => {
-				return new Promise(async (resolve, reject) => {
+			translateText: (dataTestValue, solution) => {
+				return new Promise(async (resolve) => {
 					// The input to put the translation in
-					const challengeTranslateInput = document.querySelector(
-						"[data-test='challenge-translate-input']"
-					);
-
-					// The challenge solution
-					const solution = this.currentChallenge.prompt;
+					const challengeTranslateInput = document.querySelector(`[data-test='${dataTestValue}']`);
 
 					// Types the words
 					await this.typeTranslationInput(
@@ -211,30 +68,221 @@ export default class DuoMasterCompleter extends ReactUtils {
 					await this.pressContinueDuoLingo(true);
 					resolve();
 				});
+			}
+		};
+
+		// Define the challenges and how to solve them
+		this.challenges = {
+			listenMatch: () => {
+				return new Promise(async (resolve) => {
+					const pairs = this.currentChallenge.pairs;
+
+					// Selects the pairs
+					for (const pair of pairs) {
+						const toArray = pair.translation.split(" ");
+						const prefix = toArray.length > 1 ? toArray.shift() : "";
+						const translation = toArray.join("-");
+
+						// Find HTML elements matching the pair, with optional prefix
+						const htmlPair = [
+							...document.querySelectorAll(`[data-test="${translation}-challenge-tap-token${prefix ? ` ${prefix}` : ""}"]`),
+							...document.querySelectorAll(`[data-test="${prefix ? `${prefix} ` : ""}${translation}-challenge-tap-token"]`)
+						];
+
+						// Clicks on the pair
+						for (const element of htmlPair) {
+							element.click();
+
+							// Waits between the ranges to give it a more "human" feel
+							if (this.humanFeel) {
+								await this.wait(this.randomRange(...this.humanChooseSpeedRange));
+							}
+						}
+					}
+
+					// Resolves the promise
+					resolve();
+				});
 			},
 
-			name: () => {},
-			form: () => {},
-			judge: () => {},
-			selectTranscription: () => {},
-			characterIntro: () => {},
-			selectPronunciation: () => {},
-			completeReverseTranslation: () => {},
-			listenTap: () => {},
-			tapCompleteTable: () => {},
-			typeCompleteTable: () => {},
-			typeCloze: () => {},
-			typeClozeTable: () => {},
-			tapClozeTable: () => {},
-			tapCloze: () => {},
-			tapComplete: () => {},
-			listenComprehension: () => {},
-			dialogue: () => {},
-			speak: () => {},
-			match: () => {},
-			characterTrace: () => {},
-			partialReverseTranslate: () => {},
+			assist: () => {
+				return new Promise(async (resolve) => {
+					const correctIndex = this.currentChallenge.correctIndex;
+
+					// Selects the correct choice
+					const htmlChoices = document.querySelectorAll('[data-test="challenge-choice"]');
+					if (htmlChoices[correctIndex]) {
+						htmlChoices[correctIndex].click();
+
+						// Waits between the ranges to give it a more "human" feel
+						if (this.humanFeel) {
+							await this.wait(this.randomRange(...this.humanChooseSpeedRange));
+						}
+
+						await this.pressContinueDuoLingo(true);
+					}
+
+					// Done!
+					resolve();
+				});
+			},
+
+			translate: () => {
+				return new Promise(async (resolve) => {
+					// The input to put the translation in
+					const challengeTranslateInput = document.querySelector(
+						"[data-test='challenge-translate-input']"
+					);
+
+					// Translating type (wordbank / typing)
+					console.debug(
+						`Translating exercise type: ${challengeTranslateInput ? "Typing" : "Wordbank"} ⚠️`
+					);
+
+					// Wordbank
+					if (!challengeTranslateInput) {
+						// Select the word bank
+						const wordBank = document.querySelector(
+							"[data-test='word-bank']"
+						);
+
+						// Collect all the choices
+						const choices = Array.from(wordBank.children);
+						const stringChoices = choices.map(choice =>
+							choice.querySelector(
+								"[data-test='challenge-tap-token-text']"
+							).innerText
+						);
+
+						// Clicks the correct tokens
+						for (const correctToken of this.currentChallenge.correctTokens) {
+							const index = stringChoices.indexOf(correctToken);
+
+							if (choices[index]) {
+								choices[index].querySelector("[data-test='challenge-tap-token-text']")?.click();
+								stringChoices[index] = ""; // Remove the choice so it can't be selected again (avoid bugs)
+							}
+
+							// Waits between the ranges to give it a more "human" feel
+							if (this.humanFeel) {
+								await this.wait(this.randomRange(...this.humanChooseSpeedRange));
+							}
+						}
+					} else {
+						// Type the correct translation
+						const correctTranslation = this.currentChallenge.correctSolutions[0];
+						await this.typeTranslationInput(
+							correctTranslation,
+							challengeTranslateInput
+						);
+					}
+
+					// Press continue button
+					await this.pressContinueDuoLingo(true);
+
+					// Done!
+					resolve();
+				});
+			},
+
+			listenComplete: async () => { return await this.commonChallenges.translateBlankTokens() },
+
+			listen: async () => { return await this.commonChallenges.translateText("challenge-translate-input", this.currentChallenge.prompt) },
+
+			name: async () => { return await this.commonChallenges.translateText("challenge-text-input", this.currentChallenge.correctSolutions[0]) },
+
+			completeReverseTranslation: async () => { return await this.commonChallenges.translateBlankTokens() },
+
+			// Why did duolingo use a contenteditable span instead of an input on this 💀
+			partialReverseTranslate: async () => { return await this.commonChallenges.translateBlankTokens(true) },
+
+			// form: () => { },
+			// judge: () => { },
+			// selectTranscription: () => { },
+			// characterIntro: () => { },
+			// selectPronunciation: () => { },
+			// listenTap: () => { },
+			// tapCompleteTable: () => { },
+			// typeCompleteTable: () => { },
+			// typeCloze: () => { },
+			// typeClozeTable: () => { },
+			// tapClozeTable: () => { },
+			// tapCloze: () => { },
+			// tapComplete: () => { },
+			// listenComprehension: () => { },
+			// dialogue: () => { },
+			// speak: () => { },
+			// match: () => { },
+			// characterTrace: () => { },
+			// partialReverseTranslate: () => { },
 		};
+	}
+
+	/**
+	 * Starts the Autolingo Completer
+	 * @returns {Promise<void>} - Resolves when the page is loaded
+	 */
+	async start() {
+		// Wait for the page to load
+		console.debug("Waiting for page to load... ⏳");
+		await this.waitForChallengePageLoad();
+
+		// Page loaded
+		await this.nextChallenge();
+		return Promise.resolve();
+	}
+
+	/**
+	 * Waits for the page to load
+	 * @returns {Promise<Element>} - Resolves with the element that indicates the page has loaded
+	 */
+	waitForChallengePageLoad() {
+		// Check if the loading indicator is already gone
+		if (document.querySelector(".mQ0GW")) {
+			// If it is, resolve the promise immediately with the loading indicator element
+			return Promise.resolve(document.querySelector(".mQ0GW"));
+		}
+
+		// Otherwise, create a new MutationObserver to observe the document body for changes
+		return new Promise((resolve) => {
+			const observer = new MutationObserver(mutations => {
+				// If the loading indicator is found, disconnect the observer and resolve the promise with the element
+				if (document.querySelector(".mQ0GW")) {
+					observer.disconnect();
+					resolve(document.querySelector(".mQ0GW"));
+				}
+			});
+
+			// Start observing the document body
+			observer.observe(document.body, {
+				childList: true,
+				subtree: true
+			});
+		});
+	}
+
+	/**
+	* Gets the challenge elements
+	* @returns {Promise} - The challenge elements
+	*/
+	getChallengeElements() {
+		return new Promise((resolve) => {
+			try {
+				// Find the prefix of the React Fiber node in the challenge elements
+				const prefix = Object.keys(document.querySelector(".mQ0GW")).find((e) =>
+					e.includes("__reactFiber$")
+				);
+
+				// Get the stateNode props from the challenge elements
+				const challengeElements = document.querySelector(".mQ0GW")[prefix];
+				const stateNodeProps = challengeElements.return.return.stateNode.props;
+
+				// Return the stateNode props
+				return resolve(stateNodeProps);
+			} catch (e) {
+				return resolve(null);
+			}
+		});
 	}
 
 	/**
@@ -243,31 +291,38 @@ export default class DuoMasterCompleter extends ReactUtils {
 	 * @param {HTMLElement} input - The desired input
 	 * @returns {Promise<void>} - When the typing is complete
 	 */
-	typeTranslationInput(translation, input) {
-		return new Promise(async (resolve, reject) => {
+	// Returns a promise to be resolved when the typing is done
+	typeTranslationInput(translation, input, contenteditable = false) {
+		return new Promise(async (resolve) => {
+			// Finds the React Fiber node for the input element
 			const reactFiber = this.ReactFiber(input);
+			const event = new InputEvent("input", { bubbles: true }); // Won't be used if not in a contenteditable
 
-			// Appends the text
+			// Appends the text to the input
 			for (let i = 0; i < translation.length; i++) {
+				// Gets the current text to append
 				const letter = translation.slice(0, i + 1);
 
-				reactFiber?.pendingProps?.onChange({
-					target: {
-						value: letter,
-					},
-				});
+				// Appends the letter
+				if (contenteditable) {
+					input.innerText = letter;
+					input.dispatchEvent(event); // dispatch the event to trigger the button
+				} else {
+					// Simulates an "onChange" event on the input
+					reactFiber?.pendingProps?.onChange({
+						target: {
+							value: letter,
+						},
+					});
+				}
 
-				// If humanFeel, adds a delay for a typewriting effect
+				// If "humanFeel" is enabled, adds a delay for a typewriting effect
 				if (this.humanFeel) {
-					await this.wait(
-						this.randomRange(
-							this.humanTypeSpeedRange[0],
-							this.humanTypeSpeedRange[1]
-						)
-					);
+					await this.wait(this.randomRange(...this.humanTypeSpeedRange));
 				}
 			}
 
+			// Resolves the promise to indicate the typing is done
 			resolve();
 		});
 	}
@@ -296,14 +351,6 @@ export default class DuoMasterCompleter extends ReactUtils {
 	}
 
 	/**
-	 * Starts the Autolingo Completer
-	 * @returns {Promise<void>} - Resolves when the page is loaded
-	 */
-	start() {
-		this.nextChallenge();
-	}
-
-	/**
 	 * Completes a defined challenge
 	 * @param {string} challengeType - The type of challenge to complete
 	 * @returns {Promise<void>} - Resolves when the challenge is completed
@@ -312,15 +359,21 @@ export default class DuoMasterCompleter extends ReactUtils {
 	async completeChallenge(challengeType) {
 		return new Promise(async (resolve, reject) => {
 			try {
-				// If human like, waits a bit before completing the challenge
-				if (this.humanFeel || (this.humanFeel && this.autoskip))
-					await this.wait(this.randomRange(800, 2000));
-				if (!this.humanFeel) await this.wait(500);
+				// If human-like, add a delay before completing the challenge
+				if (this.humanFeel) {
+					await this.wait(this.autoskip ? this.randomRange(800, 2000) : 500);
+				} else {
+					await this.wait(this.robotSpeed);
+				}
 
-				const completing = await this.challenges[challengeType]();
-				console.debug(
-					`Completed challenge: ${this.currentChallenge.type} 🎉`
-				);
+				if (!this.challenges[challengeType]) return reject("Invalid challenge type"); // Invalid challenge type
+
+				const completing = await this.challenges[challengeType](); // Complete the challenge
+				console.debug(`Completed challenge: ${this.currentChallenge.type} 🎉`);
+
+				// Resets the current challenge and keeps in mind the previous challenge id
+				this.previousChallengeId = this.currentChallenge.id;
+				this.currentChallenge = null;
 
 				resolve(completing);
 			} catch (e) {
@@ -336,86 +389,105 @@ export default class DuoMasterCompleter extends ReactUtils {
 	 */
 	pressContinueDuoLingo(check) {
 		return new Promise(async (resolve, reject) => {
-			const continueButton = document.querySelector(
-				"[data-test='player-next']"
-			);
+			const continueButton = document.querySelector("[data-test='player-next']");
+
+			if (!continueButton) return reject("No continue button found.");
+
+			// If the button exists and autoskip is on, click the button and resolve.
 			if (continueButton && this.autoskip) {
-				await this.wait(this.randomRange(500, 800));
+				await this.wait(this.humanFeel ? this.randomRange(500, 800) : this.robotSpeed);
 				continueButton.click();
 
+				resolve(continueButton);
+				console.debug(!check ? "Pressed continue button. ✅" : "Pressed check button. 🧩");
+			}
+			// If the button doesn't exist or autoskip is off, resolve without clicking the button.
+			else {
 				resolve();
-				console.debug(
-					!check
-						? "Pressed continue button. ✅"
-						: "Pressed check button. 🧩"
-				);
-			} else {
-				resolve();
-				console.debug(
-					"Autoskip not on, resolved without consequences. ⚠️"
-				);
+				console.debug("Autoskip not on, resolved without consequences. ⚠️");
 			}
 		});
 	}
 
 	/**
 	 * Completes the challenge and proceeds to the next one
-	 * @returns {Void}
+	 * @returns {Promise<void>}
 	 */
-	async nextChallenge() {
-		await this.waitForPageLoad();
-		const challengeElements = this.getChallengeElements();
+	nextChallenge() {
+		console.debug("--------------------");
+		console.debug("Next challenge... 🔄");
 
-		// Get the currentChallenge from the challenge elements
-		this.currentChallenge = challengeElements.currentChallenge;
-		console.debug("Current challenge:", this.currentChallenge);
+		return new Promise(async (resolve) => {
+			// Get the challenge elements
+			console.debug("Getting challenge elements... 📝");
+			const challengeElements = await this.getChallengeElements();
 
-		// Get the challengeType and proceeds to complete it
-		const currentChallengeType = this.currentChallenge.type;
-		try {
-			await this.completeChallenge(currentChallengeType);
+			console.debug(challengeElements);
 
-			if (!this.humanFeel && this.autoskip) {
-				// A timeout so it is not too fast
-				await this.wait(1000);
-			}
+			// If no challenge elements are found or that the current challenge is the same as the previous one
+			if (!challengeElements ||
+				(this.previousChallengeId &&
+					(
+						challengeElements.currentChallenge.id === this.previousChallengeId && // Same as previous challenge
+						!challengeElements.correctChallenges.filter(chal => chal.id === this.previousChallengeId).includes(this.currentChallenge) // Verifies if the bot didn't fail it before, if it did, let's consider it as a new challenge
+					)
+				)
+			) {
+				this.currentChallenge = null;
+				console.debug("Current challenge is unavailable. 🚫");
 
-			// Can autoskip
-			if (this.autoskip) {
-				await this.pressContinueDuoLingo();
-			}
+				// Tries to basically skip the screen, if it fails, it means the lesson might be finished
+				try {
+					// Autoskip or not, press the continue button so duolingo doesn't block on a message screen
+					await this.wait(this.humanFeel ? this.randomRange(500, 800) : this.robotSpeed);
+					await this.pressContinueDuoLingo();
+					console.debug("Skipped duolingo motivation / ending screen. 🚫");
 
-			console.debug("Waiting for next challenge... 🕑");
-			await this.waitForNextChallenge();
-			console.debug("Continuing to next challenge... 🚀");
-			return this.nextChallenge();
-		} catch (e) {
-			console.debug("ERROR> An error occured:", e);
-		}
-	}
-
-	/**
-	 * Waits for the page to load
-	 * @returns {Promise<Element>} - Resolves with the element that indicates the page has loaded
-	 */
-	waitForPageLoad() {
-		return new Promise((resolve, reject) => {
-			if (document.querySelector(".mQ0GW")) {
-				resolve(document.querySelector(".mQ0GW"));
-				return;
-			}
-			const observer = new MutationObserver((mutations) => {
-				if (document.querySelector(".mQ0GW")) {
-					observer.disconnect();
-					resolve(document.querySelector(".mQ0GW"));
-					return;
+					// Basically skips the challenge (even though this one didn't exist)
+					await this.nextChallenge();
+					return resolve();
+				} catch (e) {
+					console.debug("No continue button found, probably means the lesson's finished or the user left it. ⚠️");
+					return resolve();
 				}
-			});
+			}
 
-			observer.observe(document.body, {
-				childList: true,
-				subtree: true,
-			});
+			// Challenge elements are found
+			this.currentChallenge = challengeElements.currentChallenge;
+
+			// Get the challenge type and proceed to complete it
+			const currentChallengeType = this.currentChallenge.type;
+			console.debug(`Current challenge: ${this.currentChallenge.type} 🎯`);
+
+			// Tries to complete the current challenge
+			try {
+				// Complete the current challenge
+				await this.completeChallenge(currentChallengeType);
+
+				if (!this.humanFeel && this.autoskip) {
+					// Wait a bit before continuing to the next challenge
+					await this.wait(this.robotSpeed);
+				}
+
+				// Press the continue button to proceed to the next challenge
+				console.debug("Waiting for next challenge... 🕑");
+
+				// Wait for the next challenge to appear
+				if (this.autoskip) await this.pressContinueDuoLingo();
+				await this.waitForNextChallenge();
+
+				console.debug("Continuing to next challenge... 🚀");
+
+				// Start the next challenge
+				await this.nextChallenge();
+				return resolve();
+			} catch (e) {
+				// An error occured, let's see which one and skip the challenge for the code to renew
+				if (e === "No continue button found.") console.debug(e, "Probably means the lesson's finished or the user left it. ⚠️");
+				if (e === "Unknown challenge type.") console.debug(e, "⚠️ (New challenge type?)", currentChallengeType);
+				console.debug("ERROR: ", e);
+				return resolve();
+			}
 		});
 	}
 
@@ -424,40 +496,44 @@ export default class DuoMasterCompleter extends ReactUtils {
 	 * @returns {Promise<Element>} - Resolves with the element that indicates the page has loaded
 	 */
 	waitForNextChallenge() {
-		return new Promise((resolve, reject) => {
-			const observer = new MutationObserver((mutations) => {
+		if (!this.currentChallenge) return;
+		return new Promise((resolve) => {
+			// Create a mutation observer to watch for changes in the document
+			const observer = new MutationObserver(async (mutations) => {
+				// Get the current challenge elements
 				const challengeElements = this.getChallengeElements();
-				const supposedCurrentChallenge =
-					challengeElements.currentChallenge;
 
-				console.debug(supposedCurrentChallenge);
+				// Get the current supposed challenge
+				const supposedCurrentChallenge = challengeElements.currentChallenge;
 
+				// Check if the supposed current challenge is not the same as the current challenge or it does not exist
 				if (
 					supposedCurrentChallenge.id !== this.currentChallenge.id ||
 					!supposedCurrentChallenge
 				) {
+					// Disconnect the observer and resolve the promise
 					observer.disconnect();
 					resolve();
 					return;
+				} else {
+					// Tries clicking on the next button in case Duolingo is being motivational
+					if (this.autoskip) {
+						try {
+							await this.pressContinueDuoLingo();
+							console.debug("Duolingo was being motivational 🙄");
+							resolve();
+						} catch (e) {
+							console.debug("Couldn't press continue button. 🤷‍♂️");
+						}
+					}
 				}
 			});
 
+			// Observe changes in the document body
 			observer.observe(document.body, {
 				childList: true,
 				subtree: true,
 			});
 		});
-	}
-
-	/**
-	 * Gets the challenge elements
-	 * @returns {Object} - The challenge elements
-	 */
-	getChallengeElements() {
-		const prefix = Object.keys(document.querySelector(".mQ0GW")).find((e) =>
-			e.includes("__reactFiber$")
-		);
-		const challengeElements = document.querySelector(".mQ0GW")[prefix];
-		return challengeElements.return.return.stateNode.props;
 	}
 }
