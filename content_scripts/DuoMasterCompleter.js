@@ -30,7 +30,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 		}
 
 		// Contains functions that are common to some of the challenges (So no copy-pasting)
-		this.commonChallenges = {
+		this.commonChallengeFunctions = {
 			translateBlankTokens: (contenteditable = false) => {
 				return new Promise(async (resolve) => {
 					// Get words that are blank
@@ -179,30 +179,31 @@ export default class DuoMasterCompleter extends ReactUtils {
 					console.debug(`Translating exercise type: ${challengeTranslateInput ? "Typing" : "Wordbank"} ⚠️`);
 					
 					// Wordbank
-					if (!challengeTranslateInput) await this.commonChallenges.completeWordBank();
-					else await this.commonChallenges.translateText("challenge-translate-input", this.currentChallenge.correctSolutions[0]);
+					if (!challengeTranslateInput) await this.commonChallengeFunctions.completeWordBank();
+					else await this.commonChallengeFunctions.translateText("challenge-translate-input", this.currentChallenge.correctSolutions[0]);
 
 					// Done!
 					resolve();
 				});
 			},
 
-			listenComplete: async () => { return await this.commonChallenges.translateBlankTokens() },
+			listenComplete: async () => { return await this.commonChallengeFunctions.translateBlankTokens() },
 
-			listen: async () => { return await this.commonChallenges.translateText("challenge-translate-input", this.currentChallenge.prompt) },
+			listen: async () => { return await this.commonChallengeFunctions.translateText("challenge-translate-input", this.currentChallenge.prompt) },
 
-			name: async () => { return await this.commonChallenges.translateText("challenge-text-input", this.currentChallenge.correctSolutions[0]) },
+			name: async () => { return await this.commonChallengeFunctions.translateText("challenge-text-input", this.currentChallenge.correctSolutions[0]) },
 
-			completeReverseTranslation: async () => { return await this.commonChallenges.translateBlankTokens() },
+			completeReverseTranslation: async () => { return await this.commonChallengeFunctions.translateBlankTokens() },
 
 			// Why did duolingo use a contenteditable span instead of an input on this 💀
-			partialReverseTranslate: async () => { return await this.commonChallenges.translateBlankTokens(true) },
+			partialReverseTranslate: async () => { return await this.commonChallengeFunctions.translateBlankTokens(true) },
 
-			listenTap: async () => { return await this.commonChallenges.completeWordBank(); },
+			listenTap: async () => { return await this.commonChallengeFunctions.completeWordBank(); },
 
-			form: async () => { return await this.commonChallenges.chooseCorrectElement("challenge-choice", this.currentChallenge.correctIndex) },
+			form: async () => { return await this.commonChallengeFunctions.chooseCorrectElement("challenge-choice", this.currentChallenge.correctIndex) },
 
-			// judge: () => { },
+			judge: async () => { return await this.commonChallengeFunctions.chooseCorrectElement("challenge-judge-text", this.currentChallenge.correctIndices[0]) },
+
 			// selectTranscription: () => { },
 			// characterIntro: () => { },
 			// selectPronunciation: () => { },
