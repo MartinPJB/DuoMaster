@@ -2,7 +2,14 @@
 function handleInstall() {
     console.log("DuoMasterEnabled is ready to use 🚀");
     chrome.storage.local.set({
-        DuoMasterEnabled: true
+        DuoMasterEnabled: true,
+        DuoMasterSettings: {
+			humanFeel: true,
+			robotSpeed: 500,
+			humanChooseSpeedRange: [500, 900],
+			humanTypeSpeedRange: [50, 300],
+			autoskip: false,
+		}
     });
 
     handleStorage({ DuoMasterEnabled: { newValue: true } }, "local");
