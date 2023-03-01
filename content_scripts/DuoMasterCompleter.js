@@ -135,11 +135,11 @@ export default class DuoMasterCompleter extends ReactUtils {
 						// Clicks on the pair
 						for (const element of htmlPair) {
 							element.click();
+						}
 
-							// Waits between the ranges to give it a more "human" feel
-							if (this.humanFeel) {
-								await this.wait(this.randomRange(...this.humanChooseSpeedRange));
-							}
+						// Waits between the ranges to give it a more "human" feel
+						if (this.humanFeel) {
+							await this.wait(this.randomRange(...this.humanChooseSpeedRange));
 						}
 					}
 
@@ -161,8 +161,6 @@ export default class DuoMasterCompleter extends ReactUtils {
 						if (this.humanFeel) {
 							await this.wait(this.randomRange(...this.humanChooseSpeedRange));
 						}
-
-						await this.pressContinueDuoLingo(true);
 					}
 
 					// Done!
@@ -177,7 +175,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 
 					// Translating type (wordbank / typing)
 					console.debug(`Translating exercise type: ${challengeTranslateInput ? "Typing" : "Wordbank"} ⚠️`);
-					
+
 					// Wordbank
 					if (!challengeTranslateInput) await this.commonChallengeFunctions.completeWordBank();
 					else await this.commonChallengeFunctions.translateText("challenge-translate-input", this.currentChallenge.correctSolutions[0]);
@@ -377,9 +375,8 @@ export default class DuoMasterCompleter extends ReactUtils {
 				const completing = await this.challenges[challengeType](); // Complete the challenge
 				console.debug(`Completed challenge: ${this.currentChallenge.type} 🎉`);
 
-				// Resets the current challenge and keeps in mind the previous challenge id
+				// Keeps in mind the previous challenge id
 				this.previousChallengeId = this.currentChallenge.id;
-				this.currentChallenge = null;
 
 				resolve(completing);
 			} catch (e) {
@@ -420,11 +417,12 @@ export default class DuoMasterCompleter extends ReactUtils {
 
 
 	/**
-	 * Checks if the skip button is available
-	 * @returns {Boolean} - If the skip button is available
+	 * Checks if the next button is available
+	 * @returns {Boolean} - If the next button is available
 	 */
-	skipButtonAvailable() {
-		return document.querySelector("[data-test='player-skip']") ? !document.querySelector("[data-test='player-skip']").ariaDisabled : false;
+	nextButtonAvailable() {
+		console.debug(!document.querySelector("[data-test='player-next']").ariaDisabled)
+		return document.querySelector("[data-test='player-next']") ? !document.querySelector("[data-test='player-next']").ariaDisabled : false;
 	}
 
 	/**
@@ -436,6 +434,9 @@ export default class DuoMasterCompleter extends ReactUtils {
 		console.debug("--------------------");
 
 		return new Promise(async (resolve) => {
+			// Small pause to make sure the challenge is loaded
+			await this.wait(500);
+
 			// Get the challenge elements
 			console.debug("Getting challenge elements... 📝");
 			const challengeElements = await this.getChallengeElements();
@@ -446,7 +447,9 @@ export default class DuoMasterCompleter extends ReactUtils {
 			if (toggler) toggler.parentNode.removeChild(toggler);
 
 			// The challenge hasn't been completed yet, so we can continue
-			if (!(!this.skipButtonAvailable() && !this.currentChallenge) && challengeElements) {
+			console.debug(challengeElements && !(this.nextButtonAvailable() && !this.currentChallenge), '|', this.nextButtonAvailable(), this.currentChallenge, challengeElements);
+
+			if (challengeElements && !(this.nextButtonAvailable() && !this.currentChallenge)) {
 				console.debug("Completing challenge... 🎯");
 
 				// Tries to get the current challenge
@@ -469,14 +472,6 @@ export default class DuoMasterCompleter extends ReactUtils {
 							console.debug("Trying to complete challenge... 🚀");
 							await this.completeChallenge(currentChallengeType);
 							console.debug("Completed challenge. ✅");
-
-							if (!this.humanFeel && this.autoskip) {
-								// Wait a bit before continuing to the next challenge
-								await this.wait(this.robotSpeed);
-							}
-
-							// Validates at least the exercise when done
-							// this.pressContinueDuoLingo(true);
 						} catch (e) {
 							// An error occured, let's see which one and skip the challenge for the code to renew
 							if (e === "No continue button found.") console.debug(e, "Probably means the lesson's finished or the user left it. ⚠️");
@@ -499,11 +494,11 @@ export default class DuoMasterCompleter extends ReactUtils {
 				console.debug("No challenge at this moment. ⚠️");
 				await this.waitForNextChallenge();
 				console.debug("Continuing to next challenge... 🚀");
-	
+
 				// Restarts the function
 				await this.nextChallenge();
 				return resolve();
-			} catch(e) {
+			} catch (e) {
 				console.debug("The user probably ended or left the lesson. 🚫");
 				return resolve();
 			}
@@ -512,35 +507,22 @@ export default class DuoMasterCompleter extends ReactUtils {
 
 	/**
 	 * Waits for the next challenge
-	 * @returns {Promise<Element>} - Resolves with the element that indicates the page has loaded
+	 * @returns {Promise<Element>} - Resolves with the element that indicates the button was clicked on
 	 */
 	waitForNextChallenge() {
-		return new Promise((resolve, reject) => {
-			// Create a mutation observer to watch for changes in the document
-			const observer = new MutationObserver(async (mutations) => {
-				// Get the current challenge elements
-				const challengeElements = await this.getChallengeElements();
-				if (!challengeElements) return reject();
+		return new Promise(async (resolve, reject) => {
+			const continueButton = document.querySelector("[data-test='player-next']");
 
-				// Get the current supposed challenge
-				const supposedCurrentChallenge = challengeElements.currentChallenge;
+			if (!continueButton) return reject("No continue button found.");
 
-				// Check if the supposed current challenge is not the same as the current challenge or it does not exist
-				if (!this.currentChallenge || supposedCurrentChallenge && supposedCurrentChallenge.id !== this.currentChallenge.id) {
-					// Autoclicks the continue button if it exists and autoskip is enabled
-					if (this.autoskip) await this.pressContinueDuoLingo();
+			// Autoskips
+			if (this.autoskip) await this.pressContinueDuoLingo();
 
-					// Disconnect the observer and resolve the promise
-					observer.disconnect();
-					resolve();
-					return this.currentChallenge = null;
-				}
-			});
-
-			// Observe changes in the document body
-			observer.observe(document.body, {
-				childList: true,
-				subtree: true,
+			// If the button exists wait till it's clicked
+			continueButton.addEventListener("click", () => {
+				console.debug("Continue button clicked. ✅");
+				resolve();
+				return this.currentChallenge = null;
 			});
 		});
 	}
