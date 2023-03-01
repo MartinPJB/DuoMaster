@@ -204,7 +204,8 @@ export default class DuoMasterCompleter extends ReactUtils {
 
 			judge: async () => { return await this.commonChallengeFunctions.chooseCorrectElement("challenge-judge-text", this.currentChallenge.correctIndices[0]) },
 
-			// selectTranscription: () => { },
+			selectTranscription: async () => { return await this.commonChallengeFunctions.chooseCorrectElement("challenge-judge-text", this.currentChallenge.correctIndex) },
+
 			// characterIntro: () => { },
 			// selectPronunciation: () => { },
 			// tapCompleteTable: () => { },
