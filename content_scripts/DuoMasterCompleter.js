@@ -52,10 +52,10 @@ export default class DuoMasterCompleter extends ReactUtils {
 				});
 			},
 
-			translateText: (dataTestValue, solution) => {
+			translateText: (dataSelector, solution) => {
 				return new Promise(async (resolve) => {
 					// The input to put the translation in
-					const challengeTranslateInput = document.querySelector(`[data-test='${dataTestValue}']`);
+					const challengeTranslateInput = document.querySelector(`[data-test='${dataSelector}']`);
 
 					// Types the words
 					await this.typeTranslationInput(
@@ -71,16 +71,12 @@ export default class DuoMasterCompleter extends ReactUtils {
 			completeWordBank: () => {
 				return new Promise(async (resolve, reject) => {
 					// Select the word bank
-					const wordBank = document.querySelector(
-						"[data-test='word-bank']"
-					);
+					const wordBank = document.querySelector("[data-test='word-bank']");
 
 					// Collect all the choices
 					const choices = Array.from(wordBank.children);
 					const stringChoices = choices.map(choice =>
-						choice.querySelector(
-							"[data-test='challenge-tap-token-text']"
-						).innerText
+						choice.querySelector("[data-test='challenge-tap-token-text']").innerText
 					);
 
 					// Clicks the correct tokens
@@ -100,6 +96,20 @@ export default class DuoMasterCompleter extends ReactUtils {
 
 					// Done!
 					resolve();
+				});
+			},
+
+			chooseCorrectElement: (dataSelector, index) => {
+				return new Promise((resolve, reject) => {
+					const choices = document.querySelector(`[data-test='${dataSelector}']`);
+					if (index >= choices.length) index = choices.length - 1;
+
+					try {
+						choices[index].click();
+						resolve();
+					} catch (e) {
+						reject(e);
+					}
 				});
 			}
 		};
@@ -190,7 +200,8 @@ export default class DuoMasterCompleter extends ReactUtils {
 
 			listenTap: async () => { return await this.commonChallenges.completeWordBank(); },
 
-			// form: () => { },
+			form: async () => { return await this.commonChallenges.chooseCorrectElement("challenge-choice", this.currentChallenge.correctIndex) },
+
 			// judge: () => { },
 			// selectTranscription: () => { },
 			// characterIntro: () => { },
