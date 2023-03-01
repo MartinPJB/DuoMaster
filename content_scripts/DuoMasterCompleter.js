@@ -476,7 +476,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 							}
 
 							// Validates at least the exercise when done
-							this.pressContinueDuoLingo(true);
+							// this.pressContinueDuoLingo(true);
 						} catch (e) {
 							// An error occured, let's see which one and skip the challenge for the code to renew
 							if (e === "No continue button found.") console.debug(e, "Probably means the lesson's finished or the user left it. ⚠️");
