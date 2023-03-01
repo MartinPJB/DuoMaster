@@ -5,7 +5,7 @@ function handleInstall() {
         DuoMasterEnabled: true,
         DuoMasterSettings: {
 			humanFeel: false,
-			robotSpeed: 500,
+			robotSpeed: 200,
 			humanChooseSpeedRange: [500, 900],
 			humanTypeSpeedRange: [50, 300],
 			autoskip: true,
