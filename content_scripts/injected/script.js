@@ -7,6 +7,7 @@ const settings = {
 		"https://www.duolingo.com/skill",
 		"https://www.duolingo.com/challenge",
 	],
+	challengeSolving: false, // Rather a challenge is being solved or not
 	currentURL: "",
 };
 
@@ -21,6 +22,27 @@ const debug = (...content) => settings.debug ? frame.contentWindow.console.log("
 console.debug = debug;
 frame.contentWindow.console.log("DuoMaster has loaded. 🚀");
 
+
+async function completeChallenge(duoMasterSettings) {
+	// Start the completer to complete the challenge
+	if (settings.challengeSolving) return;
+	const completer = new DuoMasterCompleter(duoMasterSettings);
+	await completer.start();
+
+	// Solve the challenge when called
+	settings.challengeSolving = true;
+	do {
+		try {
+			await completer.resolveChallenge();
+		} catch (error) {
+			settings.challengeSolving = false;
+		}
+	} while (settings.challengeSolving);
+	settings.challengeSolving = false;
+
+	// Woohoo
+	console.debug("Lesson completed! 🎉");
+}
 
 // Main script
 async function main() {
@@ -45,13 +67,8 @@ async function main() {
 	// Check if the current page is a lesson page
 	if (settings.lessonPages.includes(settings.currentURL)) {
 		console.debug("Current page is a lesson page. 📖");
-	
-		const completer = new DuoMasterCompleter(duoMasterSettings);
-		await completer.start();
-		console.debug("Lesson ended! 🎉");
+		completeChallenge(duoMasterSettings);
 	}
-
-	return;
 }
 
 // Watch for URL changes

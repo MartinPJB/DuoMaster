@@ -4,11 +4,11 @@ function handleInstall() {
     chrome.storage.local.set({
         DuoMasterEnabled: true,
         DuoMasterSettings: {
-			humanFeel: true,
+			humanFeel: false,
 			robotSpeed: 500,
 			humanChooseSpeedRange: [500, 900],
 			humanTypeSpeedRange: [50, 300],
-			autoskip: false,
+			autoskip: true,
             debug: true
 		}
     });
