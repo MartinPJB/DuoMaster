@@ -10,12 +10,12 @@
 }
 
 /* Fonts */
-@font-face {
-	font-family: tiltNeon;
+/* @font-face {
+	font-family: VarelaRound;
 	font-style: normal;
 	font-weight: 700;
-	src: url(./fonts/TiltNeon-Regular.ttf) format("truetype");
-}
+	src: url(./fonts/VarelaRound-Regular.ttf) format("truetype");
+} */
 
 /* HTML */
 * {
@@ -39,15 +39,15 @@ header {
 
 header img {
 	width: 15%;
-	margin-right: 5vw;
+	/* margin-right: 5vw; */
 }
 
-header span {
+/* header span {
 	color: var(--color-eel);
-	font-family: tiltNeon;
+	font-family: VarelaRound;
 	font-weight: bold;
 	font-size: 10vw;
-}
+} */
 
 main section {
 	display: flex;
@@ -87,6 +87,7 @@ main section article .switch {
 
 main section article span {
 	font-size: 15px;
+	user-select: none;
 }
 main section article span::first-letter {
     text-transform:capitalize;
