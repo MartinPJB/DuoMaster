@@ -101,7 +101,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 
 			chooseCorrectElement: (dataSelector, index) => {
 				return new Promise((resolve, reject) => {
-					const choices = document.querySelector(`[data-test='${dataSelector}']`);
+					const choices = document.querySelectorAll(`[data-test='${dataSelector}']`);
 					if (index >= choices.length) index = choices.length - 1;
 
 					try {
