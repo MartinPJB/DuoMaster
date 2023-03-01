@@ -4,14 +4,16 @@
 	--color-duo: #58cc02;
 	--color-bee: #ce82ff;
 	--color-beak: #f49000;
+	--color-swan: #e5e5e5;
+	--color-eel: #4b4b4b;
 }
 
 /* Fonts */
 @font-face {
-	font-family: feather;
+	font-family: tiltNeon;
 	font-style: normal;
 	font-weight: 700;
-	src: url(./fonts/b6dc898912fd8734b959.otf) format("opentype")
+	src: url(./fonts/TiltNeon-Regular.ttf) format("truetype");
 }
 
 /* HTML */
@@ -30,7 +32,7 @@ header {
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	background-color: var(--color-duo);
+	border-bottom: 2px solid var(--color-swan);
 	padding: 15px 0;
 }
 
@@ -40,8 +42,9 @@ header img {
 }
 
 header span {
-	color: white;
-	font-family: feather;
+	color: var(--color-eel);
+	font-family: tiltNeon;
+	font-weight: bold;
 	font-size: 10vw;
 }
 
