@@ -394,9 +394,12 @@ export default class DuoMasterCompleter extends ReactUtils {
 			if (!continueButton) return reject("No continue button found.");
 
 			// If the button exists and autoskip is on, click the button and resolve.
-			if (continueButton && this.autoskip) {
-				await this.wait(this.humanFeel ? this.randomRange(500, 800) : this.robotSpeed);
+			if (continueButton && (this.autoskip || check)) {
+				if (!check) await this.wait(this.humanFeel ? this.randomRange(500, 800) : this.robotSpeed);
+				if (check && !this.checkClickAllowed) return resolve();
+
 				continueButton.click();
+				this.checkClickAllowed = false;
 
 				resolve(continueButton);
 				console.debug(!check ? "Pressed continue button. ✅" : "Pressed check button. 🧩");
@@ -409,83 +412,93 @@ export default class DuoMasterCompleter extends ReactUtils {
 		});
 	}
 
+
+	/**
+	 * Checks if the skip button is available
+	 * @returns {Boolean} - If the skip button is available
+	 */
+	skipButtonAvailable() {
+		return document.querySelector("[data-test='player-skip']") ? !document.querySelector("[data-test='player-skip']").ariaDisabled : false;
+	}
+
 	/**
 	 * Completes the challenge and proceeds to the next one
 	 * @returns {Promise<void>}
 	 */
 	nextChallenge() {
+		this.checkClickAllowed = true;
 		console.debug("--------------------");
-		console.debug("Next challenge... 🔄");
 
 		return new Promise(async (resolve) => {
 			// Get the challenge elements
 			console.debug("Getting challenge elements... 📝");
 			const challengeElements = await this.getChallengeElements();
+			console.debug("Got challenge elements. ✅");
 
-			console.debug(challengeElements);
+			// To make sure the player doesn't toggle the input type (keyboard/tap) while the challenge is being completed
+			const toggler = document.querySelector("[data-test='player-toggle-keyboard']");
+			if (toggler) toggler.parentNode.removeChild(toggler);
 
-			// If no challenge elements are found or that the current challenge is the same as the previous one
-			if (!challengeElements ||
-				(this.previousChallengeId &&
-					(
-						challengeElements.currentChallenge.id === this.previousChallengeId && // Same as previous challenge
-						!challengeElements.correctChallenges.filter(chal => chal.id === this.previousChallengeId).includes(this.currentChallenge) // Verifies if the bot didn't fail it before, if it did, let's consider it as a new challenge
-					)
-				)
-			) {
-				this.currentChallenge = null;
-				console.debug("Current challenge is unavailable. 🚫");
+			// The challenge hasn't been completed yet, so we can continue
+			if (!(!this.skipButtonAvailable() && !this.currentChallenge) && challengeElements) {
+				console.debug("Completing challenge... 🎯");
 
-				// Tries to basically skip the screen, if it fails, it means the lesson might be finished
-				try {
-					// Autoskip or not, press the continue button so duolingo doesn't block on a message screen
-					await this.wait(this.humanFeel ? this.randomRange(500, 800) : this.robotSpeed);
-					await this.pressContinueDuoLingo();
-					console.debug("Skipped duolingo motivation / ending screen. 🚫");
+				// Tries to get the current challenge
+				this.currentChallenge = challengeElements.currentChallenge;
 
-					// Basically skips the challenge (even though this one didn't exist)
-					await this.nextChallenge();
-					return resolve();
-				} catch (e) {
-					console.debug("No continue button found, probably means the lesson's finished or the user left it. ⚠️");
+				// If the challenge exists, continue
+				if (this.currentChallenge) {
+
+					// Verifies if the challenge is the same as the previous one and that it has not been completed yet (Previous challenge can be the same if failed)
+					if (
+						!this.previousChallengeId || // Not null
+						!challengeElements.correctChallenges.filter(chal => chal.id === this.previousChallengeId).includes(this.currentChallenge) // If the challenge not in the list of completed challenges
+					) {
+
+						// This challenge hasn't been completed yet, so we can continue
+						const currentChallengeType = this.currentChallenge.type;
+						console.debug(`Current challenge: ${currentChallengeType} 🎯`);
+						try {
+							// Complete the current challenge
+							console.debug("Trying to complete challenge... 🚀");
+							await this.completeChallenge(currentChallengeType);
+							console.debug("Completed challenge. ✅");
+
+							if (!this.humanFeel && this.autoskip) {
+								// Wait a bit before continuing to the next challenge
+								await this.wait(this.robotSpeed);
+							}
+
+							// Validates at least the exercise when done
+							this.pressContinueDuoLingo(true);
+						} catch (e) {
+							// An error occured, let's see which one and skip the challenge for the code to renew
+							if (e === "No continue button found.") console.debug(e, "Probably means the lesson's finished or the user left it. ⚠️");
+							if (e === "Unknown challenge type.") console.debug(e, "⚠️ (New challenge type?)", currentChallengeType);
+							console.debug("ERROR: ", e);
+							return resolve();
+						}
+
+					} else {
+						console.debug("This challenge already has been completed. ⚠️");
+					}
+
+				} else {
 					return resolve();
 				}
 			}
 
-			// Challenge elements are found
-			this.currentChallenge = challengeElements.currentChallenge;
-
-			// Get the challenge type and proceed to complete it
-			const currentChallengeType = this.currentChallenge.type;
-			console.debug(`Current challenge: ${this.currentChallenge.type} 🎯`);
-
-			// Tries to complete the current challenge
+			// Try to wait until the next challenge, if the function waitforNextChallenge fails, it means the lesson is probably finished or the user ended it
 			try {
-				// Complete the current challenge
-				await this.completeChallenge(currentChallengeType);
-
-				if (!this.humanFeel && this.autoskip) {
-					// Wait a bit before continuing to the next challenge
-					await this.wait(this.robotSpeed);
-				}
-
-				// Press the continue button to proceed to the next challenge
-				console.debug("Waiting for next challenge... 🕑");
-
-				// Wait for the next challenge to appear
-				if (this.autoskip) await this.pressContinueDuoLingo();
+				console.debug("No challenge at this moment. ⚠️");
 				await this.waitForNextChallenge();
-
 				console.debug("Continuing to next challenge... 🚀");
-
-				// Start the next challenge
+	
+				// Restarts the function
 				await this.nextChallenge();
 				return resolve();
-			} catch (e) {
-				// An error occured, let's see which one and skip the challenge for the code to renew
-				if (e === "No continue button found.") console.debug(e, "Probably means the lesson's finished or the user left it. ⚠️");
-				if (e === "Unknown challenge type.") console.debug(e, "⚠️ (New challenge type?)", currentChallengeType);
-				console.debug("ERROR: ", e);
+			} catch(e) {
+				console.debug("The user probably ended or left the lesson. 🚫");
 				return resolve();
 			}
 		});
@@ -496,36 +509,25 @@ export default class DuoMasterCompleter extends ReactUtils {
 	 * @returns {Promise<Element>} - Resolves with the element that indicates the page has loaded
 	 */
 	waitForNextChallenge() {
-		if (!this.currentChallenge) return;
-		return new Promise((resolve) => {
+		return new Promise((resolve, reject) => {
 			// Create a mutation observer to watch for changes in the document
 			const observer = new MutationObserver(async (mutations) => {
 				// Get the current challenge elements
-				const challengeElements = this.getChallengeElements();
+				const challengeElements = await this.getChallengeElements();
+				if (!challengeElements) return reject();
 
 				// Get the current supposed challenge
 				const supposedCurrentChallenge = challengeElements.currentChallenge;
 
 				// Check if the supposed current challenge is not the same as the current challenge or it does not exist
-				if (
-					supposedCurrentChallenge.id !== this.currentChallenge.id ||
-					!supposedCurrentChallenge
-				) {
+				if (!this.currentChallenge || supposedCurrentChallenge && supposedCurrentChallenge.id !== this.currentChallenge.id) {
+					// Autoclicks the continue button if it exists and autoskip is enabled
+					if (this.autoskip) await this.pressContinueDuoLingo();
+
 					// Disconnect the observer and resolve the promise
 					observer.disconnect();
 					resolve();
-					return;
-				} else {
-					// Tries clicking on the next button in case Duolingo is being motivational
-					if (this.autoskip) {
-						try {
-							await this.pressContinueDuoLingo();
-							console.debug("Duolingo was being motivational 🙄");
-							resolve();
-						} catch (e) {
-							console.debug("Couldn't press continue button. 🤷‍♂️");
-						}
-					}
+					return this.currentChallenge = null;
 				}
 			});
 
