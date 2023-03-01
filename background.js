@@ -9,6 +9,7 @@ function handleInstall() {
 			humanChooseSpeedRange: [500, 900],
 			humanTypeSpeedRange: [50, 300],
 			autoskip: false,
+            debug: true
 		}
     });
 

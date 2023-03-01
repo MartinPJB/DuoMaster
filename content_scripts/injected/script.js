@@ -1,6 +1,6 @@
 // Script settings
 const settings = {
-	debug: true,
+	debug: false,
 	lessonPages: [
 		"https://www.duolingo.com/lesson",
 		"https://www.duolingo.com/practice",
@@ -17,21 +17,36 @@ import DuoMasterCompleter from "../DuoMasterCompleter.js";
 const frame = document.body.appendChild(document.createElement("iframe"));
 frame.style.display = "none";
 
-const debug = settings.debug
-	? (...content) => frame.contentWindow.console.log("DEBUG>", ...content)
-	: () => {};
+const debug = (...content) => settings.debug ? frame.contentWindow.console.log("DEBUG>", ...content) : null;
 console.debug = debug;
-console.debug("DuoMaster has loaded. 🚀");
+frame.contentWindow.console.log("DuoMaster has loaded. 🚀");
 
 
 // Main script
 async function main() {
+	// Get the settings from the page
+	let duoMasterSettings = document.getElementById("duomaster-settings") ? JSON.parse(atob(document.getElementById("duomaster-settings").value)) : null;
+	if (!duoMasterSettings) {
+		console.debug("Couldn't find the settings. 🤔");
+		console.debug("DuoMaster will use the default settings. 📝");
+		duoMasterSettings = {
+			humanFeel: true,
+			robotSpeed: 500,
+			humanChooseSpeedRange: [500, 900],
+			humanTypeSpeedRange: [50, 300],
+			autoskip: false,
+		};
+	} else {
+		console.debug("Settings found! 📝");
+		console.debug("Settings:", duoMasterSettings);
+		settings.debug = duoMasterSettings.debug;
+	}
 
 	// Check if the current page is a lesson page
 	if (settings.lessonPages.includes(settings.currentURL)) {
 		console.debug("Current page is a lesson page. 📖");
-		const completer = new DuoMasterCompleter(window.duomaster.settings);
-
+	
+		const completer = new DuoMasterCompleter(duoMasterSettings);
 		await completer.start();
 		console.debug("Lesson ended! 🎉");
 	}
