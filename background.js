@@ -13,7 +13,6 @@ function handleInstall() {
 		}
     });
 
-    handleStorage({ DuoMasterEnabled: { newValue: true } }, "local");
 }
 
 // Function: Handle the storage changes and update the badge depending on the value

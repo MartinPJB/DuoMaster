@@ -41,6 +41,5 @@
 				"content_scripts/*/*.js"
 			]
 		}
-	],
-	"options_page": "options/options.html"
+	]
 }

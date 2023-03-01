@@ -27,6 +27,8 @@ function injectDuoMaster(settings) {
 	settingsElement.value = btoa(JSON.stringify(settings));
 	document.body.appendChild(settingsElement);
 
+	console.log(settings);
+
 	// Injects the script
 	const script = document.createElement("script");
 	script.type = "module";
