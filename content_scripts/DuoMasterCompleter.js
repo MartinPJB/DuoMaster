@@ -47,9 +47,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 					// Type the words in the text input element
 					await this.typeTranslationInput(wordsToComplete, challengeTranslateInput, contenteditable);
 
-					// Click on the continue button
-					await this.pressContinueDuoLingo(true);
-
+					// Done!
 					resolve();
 				});
 			},
@@ -65,7 +63,42 @@ export default class DuoMasterCompleter extends ReactUtils {
 						challengeTranslateInput
 					);
 
-					await this.pressContinueDuoLingo(true);
+					// Done!
+					resolve();
+				});
+			},
+
+			completeWordBank: () => {
+				return new Promise(async (resolve, reject) => {
+					// Select the word bank
+					const wordBank = document.querySelector(
+						"[data-test='word-bank']"
+					);
+
+					// Collect all the choices
+					const choices = Array.from(wordBank.children);
+					const stringChoices = choices.map(choice =>
+						choice.querySelector(
+							"[data-test='challenge-tap-token-text']"
+						).innerText
+					);
+
+					// Clicks the correct tokens
+					for (const correctToken of this.currentChallenge.correctTokens) {
+						const index = stringChoices.indexOf(correctToken);
+
+						if (choices[index]) {
+							choices[index].querySelector("[data-test='challenge-tap-token-text']")?.click();
+							stringChoices[index] = ""; // Remove the choice so it can't be selected again (avoid bugs)
+						}
+
+						// Waits between the ranges to give it a more "human" feel
+						if (this.humanFeel) {
+							await this.wait(this.randomRange(...this.humanChooseSpeedRange));
+						}
+					}
+
+					// Done!
 					resolve();
 				});
 			}
@@ -100,7 +133,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 						}
 					}
 
-					// Resolves the promise
+					// Done!
 					resolve();
 				});
 			},
@@ -130,55 +163,14 @@ export default class DuoMasterCompleter extends ReactUtils {
 			translate: () => {
 				return new Promise(async (resolve) => {
 					// The input to put the translation in
-					const challengeTranslateInput = document.querySelector(
-						"[data-test='challenge-translate-input']"
-					);
+					const challengeTranslateInput = document.querySelector("[data-test='challenge-translate-input']");
 
 					// Translating type (wordbank / typing)
-					console.debug(
-						`Translating exercise type: ${challengeTranslateInput ? "Typing" : "Wordbank"} ⚠️`
-					);
-
+					console.debug(`Translating exercise type: ${challengeTranslateInput ? "Typing" : "Wordbank"} ⚠️`);
+					
 					// Wordbank
-					if (!challengeTranslateInput) {
-						// Select the word bank
-						const wordBank = document.querySelector(
-							"[data-test='word-bank']"
-						);
-
-						// Collect all the choices
-						const choices = Array.from(wordBank.children);
-						const stringChoices = choices.map(choice =>
-							choice.querySelector(
-								"[data-test='challenge-tap-token-text']"
-							).innerText
-						);
-
-						// Clicks the correct tokens
-						for (const correctToken of this.currentChallenge.correctTokens) {
-							const index = stringChoices.indexOf(correctToken);
-
-							if (choices[index]) {
-								choices[index].querySelector("[data-test='challenge-tap-token-text']")?.click();
-								stringChoices[index] = ""; // Remove the choice so it can't be selected again (avoid bugs)
-							}
-
-							// Waits between the ranges to give it a more "human" feel
-							if (this.humanFeel) {
-								await this.wait(this.randomRange(...this.humanChooseSpeedRange));
-							}
-						}
-					} else {
-						// Type the correct translation
-						const correctTranslation = this.currentChallenge.correctSolutions[0];
-						await this.typeTranslationInput(
-							correctTranslation,
-							challengeTranslateInput
-						);
-					}
-
-					// Press continue button
-					await this.pressContinueDuoLingo(true);
+					if (!challengeTranslateInput) await this.commonChallenges.completeWordBank();
+					else await this.commonChallenges.translateText("challenge-translate-input", this.currentChallenge.correctSolutions[0]);
 
 					// Done!
 					resolve();
@@ -196,12 +188,13 @@ export default class DuoMasterCompleter extends ReactUtils {
 			// Why did duolingo use a contenteditable span instead of an input on this 💀
 			partialReverseTranslate: async () => { return await this.commonChallenges.translateBlankTokens(true) },
 
+			listenTap: async () => { return await this.commonChallenges.completeWordBank(); },
+
 			// form: () => { },
 			// judge: () => { },
 			// selectTranscription: () => { },
 			// characterIntro: () => { },
 			// selectPronunciation: () => { },
-			// listenTap: () => { },
 			// tapCompleteTable: () => { },
 			// typeCompleteTable: () => { },
 			// typeCloze: () => { },
