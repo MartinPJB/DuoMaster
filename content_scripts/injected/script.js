@@ -37,11 +37,11 @@ async function completeChallenge(duoMasterSettings) {
 		} catch (error) {
 			settings.challengeSolving = false;
 		}
-	} while (settings.challengeSolving);
+	} while (settings.challengeSolving && settings.lessonPages.includes(settings.currentURL));
 	settings.challengeSolving = false;
 
 	// Woohoo
-	console.debug("Lesson completed! 🎉");
+	console.debug("Lesson completed or ended by the user! 🎉");
 }
 
 
@@ -82,60 +82,55 @@ async function main() {
 		console.debug("Auto practice mode is enabled. 🤖");
 		const practiceButton = document.querySelector("[data-test='global-practice']");
 
-		// If the practice button is found
-		if (practiceButton) {
-			// If human feels, wait between 5 and 10 seconds before clicking the button
-			const waitingTime = duoMasterSettings.humanFeel ? Math.random() * 10000 : 3000;
+		// Waits until the practice button is found
+		console.debug("Waiting for the practice button to appear... 🕒");
+		do {
+			await new Promise(resolve => setTimeout(resolve, 200));
+		} while (!practiceButton);
+		console.debug("Practice button found! 🎉");
 
 
-			// Adds a class to the body to hide the overflow
-			document.body.classList.add("duomaster-autoPractice");
+		// If human feels, wait between 5 and 10 seconds before clicking the button
+		const waitingTime = duoMasterSettings.humanFeel ? Math.random() * (10000 - 5000 + 1) + 5000 : 3000;
 
-			// Adds a kind of splash screen to warn the user he has the auto practice mode enabled
-			// Sets the container of that splash screen
-			const splashScreen = document.body.appendChild(document.createElement("div"));
-			splashScreen.classList.add("duomaster-splash-screen");
+		// Adds a class to the body to hide the overflow
+		document.body.classList.add("duomaster-autoPractice");
 
-			// Sets the title and the text of the splash screen
-			const splashScreenTitle = splashScreen.appendChild(document.createElement("h1"));
-			const splashScreenText = splashScreen.appendChild(document.createElement("p"));
+		// Adds a kind of splash screen to warn the user he has the auto practice mode enabled
+		// Sets the container of that splash screen
+		const splashScreen = document.body.appendChild(document.createElement("div"));
+		splashScreen.classList.add("duomaster-splash-screen");
 
-			splashScreenTitle.innerHTML = "Auto practice mode <span>enabled</span>!";
-			splashScreenText.innerText = `DuoMaster will start the practice mode automatically in ${Math.floor(waitingTime / 1000)} seconds. You can disable this feature in the settings.\n\nIf the "human feel" option is enabled, the time will be random between 5 and 10 seconds. If not, it will be 3 seconds.`;
+		// Sets the title and the text of the splash screen
+		const splashScreenTitle = splashScreen.appendChild(document.createElement("h1"));
+		const splashScreenText = splashScreen.appendChild(document.createElement("p"));
 
-			// Adds the splash screen to the page
-			splashScreen.appendChild(splashScreenTitle);
-			splashScreen.appendChild(splashScreenText);
-			document.body.appendChild(splashScreen);
+		splashScreenTitle.innerHTML = "Auto practice mode <span>enabled</span>!";
+		splashScreenText.innerText = `DuoMaster will start the practice mode automatically in ${Math.floor(waitingTime / 1000)} seconds. You can disable this feature in the settings.\n\nIf the "human feel" option is enabled, the time will be random between 5 and 10 seconds. If not, it will be 3 seconds.`;
 
-			// Waits a few second to not spam, then click the button
-			await new Promise((resolve) => setTimeout(resolve, waitingTime));
+		// Adds the splash screen to the page
+		splashScreen.appendChild(splashScreenTitle);
+		splashScreen.appendChild(splashScreenText);
+		document.body.appendChild(splashScreen);
 
-			console.debug("Auto starting the practice mode. 🚀");
-			practiceButton.click();
-		} else {
-			console.debug("Couldn't find the practice button. 🤔");
-		}
+		// Waits a few second to not spam, then click the button
+		await new Promise((resolve) => setTimeout(resolve, waitingTime));
+
+		console.debug("Auto starting the practice mode. 🚀");
+		practiceButton.click();
 	}
 }
 
 // Watch for URL changes
-function watchURLChanges() {
+async function watchURLChanges() {
 	// Check if the current URL is different from the previous one
-	if (settings.currentURL !== window.location.href) {
-		settings.currentURL = window.location.href;
-		console.debug("URL changed to", window.location.href, "🕯️");
-		return main(); // Rerun the main script
+	while (true) {
+		if (settings.currentURL !== window.location.href) {
+			settings.currentURL = window.location.href;
+			console.debug("URL changed to", window.location.href, "🕯️");
+			main(); // Runs main script
+		}
+		await new Promise(resolve => setTimeout(resolve, 100));
 	}
 }
-
-document.body.addEventListener(
-	"click",
-	() => {
-		requestAnimationFrame(() => {
-			watchURLChanges();
-		});
-	},
-	true
-);
 watchURLChanges();

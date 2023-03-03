@@ -136,12 +136,12 @@ export default class DuoMasterCompleter extends ReactUtils {
 						// Clicks on the pair
 						for (const element of htmlPair) {
 							element.click();
-							this.wait(this.randomRange(...this.humanChooseSpeedRange));
+							await this.wait(this.randomRange(this.humanFeel ? this.humanChooseSpeedRange[0] : 1, this.humanFeel ? this.humanChooseSpeedRange[1] : 2));
 						}
 
 						// Waits between the ranges to give it a more "human" feel
 						if (this.humanFeel) {
-							await this.wait(this.randomRange(...this.humanChooseSpeedRange));
+							await this.wait(this.randomRange(20, 100));
 						}
 					}
 
@@ -436,7 +436,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 			console.debug("Getting challenge elements... 📝", this.autoskip);
 			const challengeElements = await this.getChallengeElements();
 			if (!challengeElements) return reject(); // No challenge elements found
-			
+
 			console.debug("Got challenge elements. ✅");
 
 			// To make sure the player doesn't toggle the input type (keyboard/tap) while the challenge is being completed
@@ -487,9 +487,14 @@ export default class DuoMasterCompleter extends ReactUtils {
 			}
 
 			// Try to wait until the next challenge, if the function waitforNextChallenge fails, it means the lesson is probably finished or the user ended it
-			console.debug("No challenge at this moment. ⚠️");
-			if (this.autoskip) await this.pressContinueDuoLingo();
-			resolve();
+			try {
+				console.debug("No challenge at this moment. ⚠️");
+				if (this.autoskip) await this.pressContinueDuoLingo();
+				resolve();
+			} catch (e) {
+				console.debug("Probably means the lesson's finished or the user left it. ⚠️");
+				resolve();
+			}
 		});
 	}
 }
