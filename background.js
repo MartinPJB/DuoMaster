@@ -5,12 +5,12 @@ async function handleInstall() {
     console.log("DuoMasterEnabled is ready to use 🚀");
     const options = await chromeStorageGetAsync("DuoMasterSettings");
     let settings = {
-        humanFeel: false,
+        humanLike: false,
         robotSpeed: 200,
         humanChooseSpeedRange: [500, 900],
         humanTypeSpeedRange: [50, 300],
         autoskip: true,
-        debug: true,
+        debug: false,
         autoPractice: false,
     }
 

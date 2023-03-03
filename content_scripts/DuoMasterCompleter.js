@@ -25,8 +25,8 @@ export default class DuoMasterCompleter extends ReactUtils {
 			}
 		}
 
-		// Set autoskip to true if humanFeel is false by default
-		if (!this.humanFeel) {
+		// Set autoskip to true if humanLike is false by default
+		if (!this.humanLike) {
 			this.autoskip = true;
 		}
 
@@ -90,7 +90,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 						}
 
 						// Waits between the ranges to give it a more "human" feel
-						if (this.humanFeel) {
+						if (this.humanLike) {
 							await this.wait(this.randomRange(...this.humanChooseSpeedRange));
 						}
 					}
@@ -136,11 +136,11 @@ export default class DuoMasterCompleter extends ReactUtils {
 						// Clicks on the pair
 						for (const element of htmlPair) {
 							element.click();
-							await this.wait(this.randomRange(this.humanFeel ? this.humanChooseSpeedRange[0] : 1, this.humanFeel ? this.humanChooseSpeedRange[1] : 2));
+							await this.wait(this.randomRange(this.humanLike ? this.humanChooseSpeedRange[0] : 1, this.humanLike ? this.humanChooseSpeedRange[1] : 2));
 						}
 
 						// Waits between the ranges to give it a more "human" feel
-						if (this.humanFeel) {
+						if (this.humanLike) {
 							await this.wait(this.randomRange(20, 100));
 						}
 					}
@@ -160,7 +160,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 						htmlChoices[correctIndex].click();
 
 						// Waits between the ranges to give it a more "human" feel
-						if (this.humanFeel) {
+						if (this.humanLike) {
 							await this.wait(this.randomRange(...this.humanChooseSpeedRange));
 						}
 					}
@@ -320,8 +320,8 @@ export default class DuoMasterCompleter extends ReactUtils {
 					});
 				}
 
-				// If "humanFeel" is enabled, adds a delay for a typewriting effect
-				if (this.humanFeel) {
+				// If "humanLike" is enabled, adds a delay for a typewriting effect
+				if (this.humanLike) {
 					await this.wait(this.randomRange(...this.humanTypeSpeedRange));
 				}
 			}
@@ -364,7 +364,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 		return new Promise(async (resolve, reject) => {
 			try {
 				// If human-like, add a delay before completing the challenge
-				if (this.humanFeel) {
+				if (this.humanLike) {
 					await this.wait(this.autoskip ? this.randomRange(800, 2000) : 500);
 				} else {
 					await this.wait(this.robotSpeed);
@@ -398,7 +398,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 
 			// If the button exists and autoskip is on, click the button and resolve.
 			if (continueButton && (this.autoskip || check)) {
-				if (!check) await this.wait(this.humanFeel ? this.randomRange(500, 800) : this.robotSpeed);
+				if (!check) await this.wait(this.humanLike ? this.randomRange(500, 800) : this.robotSpeed);
 				continueButton.click();
 
 				resolve(continueButton);

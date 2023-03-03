@@ -53,7 +53,7 @@ async function main() {
 		console.debug("Couldn't find the settings. 🤔");
 		console.debug("DuoMaster will use the default settings. 📝");
 		duoMasterSettings = {
-			humanFeel: true,
+			humanLike: true,
 			robotSpeed: 500,
 			humanChooseSpeedRange: [500, 900],
 			humanTypeSpeedRange: [50, 300],
@@ -91,7 +91,7 @@ async function main() {
 
 
 		// If human feels, wait between 5 and 10 seconds before clicking the button
-		const waitingTime = duoMasterSettings.humanFeel ? Math.random() * (10000 - 5000 + 1) + 5000 : 3000;
+		const waitingTime = duoMasterSettings.humanLike ? Math.random() * (10000 - 5000 + 1) + 5000 : 3000;
 
 		// Adds a class to the body to hide the overflow
 		document.body.classList.add("duomaster-autoPractice");
@@ -106,7 +106,7 @@ async function main() {
 		const splashScreenText = splashScreen.appendChild(document.createElement("p"));
 
 		splashScreenTitle.innerHTML = "Auto practice mode <span>enabled</span>!";
-		splashScreenText.innerText = `DuoMaster will start the practice mode automatically in ${Math.floor(waitingTime / 1000)} seconds. You can disable this feature in the settings.\n\nIf the "human feel" option is enabled, the time will be random between 5 and 10 seconds. If not, it will be 3 seconds.`;
+		splashScreenText.innerText = `DuoMaster will start the practice mode automatically in ${Math.floor(waitingTime / 1000)} seconds. You can disable this feature in the settings.\n\nIf the "Human Like" option is enabled, the time will be random between 5 and 10 seconds. If not, it will be 3 seconds.`;
 
 		// Adds the splash screen to the page
 		splashScreen.appendChild(splashScreenTitle);
