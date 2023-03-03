@@ -10,6 +10,7 @@ function omit(key, obj) {
 }
 
 function updateSliders() {
+	console.log("Updating sliders");
 	for (const setting in switches) {
 		if (typeof switches[setting] !== "boolean") continue;
 
@@ -39,7 +40,6 @@ function updateSliders() {
 				// Update the switches object
 				switches[key] = e.target.checked;
 				const newSwitches = omit("extensionEnabled", switches);
-				console.log(newSwitches);
 				chrome.storage.local.set({ DuoMasterSettings: newSwitches });
 			}
 			switchInput.checked = e.target.checked;
@@ -47,20 +47,20 @@ function updateSliders() {
 			reloadDuolingoTabs();
 			updateSliders();
 		});
-	}
 
-	// Exceptions
-	// Auto checks the autoskip checkbox if humanFeel is disabled
-	const articleAutoSkip = document.getElementById("autoskip");
-	const autoskipInput = articleAutoSkip.querySelector(`.autoskip_input`);
-	if (!switches.humanFeel || switches.autoPractice) {
-		console.log("Human feel is disabled || auto practice is enabled, autoskip is enabled");
-		autoskipInput.checked = true;
-		switches.autoskip = autoskipInput.checked; 
-		autoskipInput.disabled = true;
-	} else {
-		if (switches.extensionEnabled) {
-			autoskipInput.disabled = false;
+		// Exceptions
+		switch(key) {
+			case "autoskip":
+				console.log(!switches.humanLike || switches.autoPractice, switches.humanLike, switches.autoPractice);
+				if (!switches.humanLike || switches.autoPractice) {
+					console.log("Human feel is disabled || auto practice is enabled, autoskip is enabled");
+					switchInput.checked = true;
+					switches.autoskip = switchInput.checked;
+					switchInput.disabled = true;
+				} else {
+					switchInput.disabled = !switches.extensionEnabled;
+				}
+				break;
 		}
 	}
 }
@@ -87,19 +87,16 @@ async function initPopupWindow() {
 		switches[setting] = settings[setting];
 	}
 
-	for (const setting in switches) {
-		if (typeof switches[setting] !== "boolean") continue;
-
-		const articleToAppend =
-			`<article id="${setting}">
-            <label class="switch">
-                <input class="${setting}_input" type="checkbox">
-                <span class="slider"></span>
-            </label>
-            <span class="${setting}_text">Disabled</span>
-        </article>`;
-		document.getElementById("content").innerHTML += articleToAppend;
-	}
+	const settingNames = Object.keys(switches).filter(name => typeof switches[name] === "boolean");
+	const contentHTML = settingNames.map(name => `<article id="${name}">
+		<label class="switch">
+			<input class="${name}_input" type="checkbox">
+			<span class="slider"></span>
+		</label>
+		<span class="${name}_text">Disabled</span>
+	</article>`).join("");
+	document.getElementById("content").innerHTML += contentHTML;
+	
 	updateSliders();
 }
 

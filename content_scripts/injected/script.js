@@ -62,20 +62,22 @@ async function main() {
 		};
 	} else {
 		console.debug("Settings found! 📝");
-		console.debug("Settings:", duoMasterSettings);
+		console.debug(`Settings: ${JSON.stringify(duoMasterSettings)}`);
 		settings.debug = duoMasterSettings.debug;
 	}
-
 
 	// Check if the current page is a lesson page
 	if (settings.lessonPages.includes(settings.currentURL)) {
 		console.debug("Current page is a lesson page. 📖");
 
 		// Deletes the splash screen if exists
-		if (document.querySelector(".duomaster-splash-screen")) document.body.removeChild(document.querySelector(".duomaster-splash-screen"));
-		completeChallenge(duoMasterSettings);
-	}
+		const splashScreen = document.querySelector(".duomaster-splash-screen");
+		if (splashScreen) {
+			document.body.removeChild(splashScreen);
+		}
 
+		return completeChallenge(duoMasterSettings);
+	}
 
 	// Tries to auto launch the practice mode if enabled
 	if (duoMasterSettings.autoPractice) {
@@ -84,11 +86,10 @@ async function main() {
 
 		// Waits until the practice button is found
 		console.debug("Waiting for the practice button to appear... 🕒");
-		do {
+		if (!practiceButton) {
 			await new Promise(resolve => setTimeout(resolve, 200));
-		} while (!practiceButton);
+		}
 		console.debug("Practice button found! 🎉");
-
 
 		// If human feels, wait between 5 and 10 seconds before clicking the button
 		const waitingTime = duoMasterSettings.humanLike ? Math.random() * (10000 - 5000 + 1) + 5000 : 3000;
@@ -98,17 +99,17 @@ async function main() {
 
 		// Adds a kind of splash screen to warn the user he has the auto practice mode enabled
 		// Sets the container of that splash screen
-		const splashScreen = document.body.appendChild(document.createElement("div"));
+		const splashScreen = document.createElement("div");
 		splashScreen.classList.add("duomaster-splash-screen");
 
 		// Sets the title and the text of the splash screen
-		const splashScreenTitle = splashScreen.appendChild(document.createElement("h1"));
-		const splashScreenText = splashScreen.appendChild(document.createElement("p"));
+		const splashScreenTitle = document.createElement("h1");
+		const splashScreenText = document.createElement("p");
 
-		splashScreenTitle.innerHTML = "Auto practice mode <span>enabled</span>!";
+		splashScreenTitle.innerHTML = `Auto practice mode <span>enabled</span>!`;
 		splashScreenText.innerText = `DuoMaster will start the practice mode automatically in ${Math.floor(waitingTime / 1000)} seconds. You can disable this feature in the settings.\n\nIf the "Human Like" option is enabled, the time will be random between 5 and 10 seconds. If not, it will be 3 seconds.`;
 
-		// Adds the splash screen to the page
+		// // Adds the splash screen to the page
 		splashScreen.appendChild(splashScreenTitle);
 		splashScreen.appendChild(splashScreenText);
 		document.body.appendChild(splashScreen);
@@ -122,15 +123,15 @@ async function main() {
 }
 
 // Watch for URL changes
-async function watchURLChanges() {
-	// Check if the current URL is different from the previous one
-	while (true) {
-		if (settings.currentURL !== window.location.href) {
-			settings.currentURL = window.location.href;
-			console.debug("URL changed to", window.location.href, "🕯️");
+function watchURLChanges() {
+	const observer = new MutationObserver((mutations) => {
+		const url = window.location.href;
+		if (url !== settings.currentURL) {
+			settings.currentURL = url;
+			console.debug(`URL changed to ${url} 🕯️`);
 			main(); // Runs main script
 		}
-		await new Promise(resolve => setTimeout(resolve, 100));
-	}
+	});
+	observer.observe(document, { subtree: true, childList: true });
 }
 watchURLChanges();
