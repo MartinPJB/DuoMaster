@@ -21,6 +21,9 @@
 			"js": [
 				"content_scripts/initialize.js"
 			],
+			"css": [
+				"content_scripts/css/duomaster.css"
+			],
 			"matches": [
 				"https://www.duolingo.com/*"
 			]

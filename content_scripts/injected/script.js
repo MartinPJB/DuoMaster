@@ -12,7 +12,7 @@ const settings = {
 };
 
 // Import required modules
-import DuoMasterCompleter from "../DuoMasterCompleter.js";
+import DuoMasterCompleter from "../duoMasterCompleter.js";
 
 // Custom console log function for the debug
 const frame = document.body.appendChild(document.createElement("iframe"));
@@ -70,6 +70,9 @@ async function main() {
 	// Check if the current page is a lesson page
 	if (settings.lessonPages.includes(settings.currentURL)) {
 		console.debug("Current page is a lesson page. 📖");
+
+		// Deletes the splash screen if exists
+		if (document.querySelector(".duomaster-splash-screen")) document.body.removeChild(document.querySelector(".duomaster-splash-screen"));
 		completeChallenge(duoMasterSettings);
 	}
 
@@ -78,11 +81,35 @@ async function main() {
 	if (duoMasterSettings.autoPractice) {
 		console.debug("Auto practice mode is enabled. 🤖");
 		const practiceButton = document.querySelector("[data-test='global-practice']");
+
+		// If the practice button is found
 		if (practiceButton) {
+			// If human feels, wait between 5 and 10 seconds before clicking the button
+			const waitingTime = duoMasterSettings.humanFeel ? Math.random() * 10000 : 3000;
+
+
+			// Adds a class to the body to hide the overflow
+			document.body.classList.add("duomaster-autoPractice");
+
+			// Adds a kind of splash screen to warn the user he has the auto practice mode enabled
+			// Sets the container of that splash screen
+			const splashScreen = document.body.appendChild(document.createElement("div"));
+			splashScreen.classList.add("duomaster-splash-screen");
+
+			// Sets the title and the text of the splash screen
+			const splashScreenTitle = splashScreen.appendChild(document.createElement("h1"));
+			const splashScreenText = splashScreen.appendChild(document.createElement("p"));
+
+			splashScreenTitle.innerHTML = "Auto practice mode <span>enabled</span>!";
+			splashScreenText.innerText = `DuoMaster will start the practice mode automatically in ${Math.floor(waitingTime / 1000)} seconds. You can disable this feature in the settings.\n\nIf the "human feel" option is enabled, the time will be random between 5 and 10 seconds. If not, it will be 3 seconds.`;
+
+			// Adds the splash screen to the page
+			splashScreen.appendChild(splashScreenTitle);
+			splashScreen.appendChild(splashScreenText);
+			document.body.appendChild(splashScreen);
+
 			// Waits a few second to not spam, then click the button
-			// If human feels, wait between 5 and 10 seconds
-			const randomWait = Math.random() * 10000;
-			await new Promise((resolve) => setTimeout(resolve, duoMasterSettings.humanFeel ? randomWait : 3000));
+			await new Promise((resolve) => setTimeout(resolve, waitingTime));
 
 			console.debug("Auto starting the practice mode. 🚀");
 			practiceButton.click();

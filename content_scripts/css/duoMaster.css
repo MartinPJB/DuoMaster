@@ -1,0 +1,34 @@
+/* Splash screen */
+body.duomaster-autoPractice::-webkit-scrollbar {
+    display: none;
+}
+
+body div.duomaster-splash-screen {
+    background-color: rgba(0, 0, 0, .9);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 999999;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+body div.duomaster-splash-screen * {
+    color: #ffffff;
+    cursor: default;
+    text-align: center;
+}
+
+body div.duomaster-splash-screen h1 {
+    font-size: 2em;
+    font-weight: bold;
+}
+
+body div.duomaster-splash-screen h1 span {
+    color: rgb(var(--color-owl));
+}

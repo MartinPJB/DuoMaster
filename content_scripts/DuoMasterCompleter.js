@@ -1,5 +1,5 @@
 // Import the ReactUtils class
-import ReactUtils from "./ReactUtils.js";
+import ReactUtils from "../include/reactUtils.js";
 
 /**
  * A utility class that extends the ReactUtils class and provides methods to work with the DuoMasterCompleter
@@ -433,7 +433,7 @@ export default class DuoMasterCompleter extends ReactUtils {
 			await this.wait(500);
 
 			// Get the challenge elements
-			console.debug("Getting challenge elements... 📝");
+			console.debug("Getting challenge elements... 📝", this.autoskip);
 			const challengeElements = await this.getChallengeElements();
 			if (!challengeElements) return reject(); // No challenge elements found
 			

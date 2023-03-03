@@ -53,9 +53,10 @@ function updateSliders() {
 	// Auto checks the autoskip checkbox if humanFeel is disabled
 	const articleAutoSkip = document.getElementById("autoskip");
 	const autoskipInput = articleAutoSkip.querySelector(`.autoskip_input`);
-	if (!switches.humanFeel) {
-		console.log("Human feel is disabled, autoskip is enabled");
+	if (!switches.humanFeel || switches.autoPractice) {
+		console.log("Human feel is disabled || auto practice is enabled, autoskip is enabled");
 		autoskipInput.checked = true;
+		switches.autoskip = autoskipInput.checked; 
 		autoskipInput.disabled = true;
 	} else {
 		if (switches.extensionEnabled) {
