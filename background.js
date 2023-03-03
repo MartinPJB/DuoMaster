@@ -1,19 +1,4 @@
-/**
- * Gets a value from chrome.storage.local asynchronously.
- * @param {String} key - The key to get from chrome.storage.local.
- * @returns {Promise} - A promise that resolves with the value.
- */
-async function chromeStorageGetAsync(key) {
-    return new Promise((resolve, reject) => {
-        chrome.storage.local.get([key], function (result) {
-            if (result[key] === undefined) {
-                reject();
-            } else {
-                resolve(result[key]);
-            }
-        });
-    });
-};
+import { chromeStorageGetAsync } from "./include/functions.js";
 
 // Function: Handle the installation of the extension and the storage changes
 async function handleInstall() {
@@ -25,7 +10,8 @@ async function handleInstall() {
         humanChooseSpeedRange: [500, 900],
         humanTypeSpeedRange: [50, 300],
         autoskip: true,
-        debug: true
+        debug: true,
+        autoPractice: false,
     }
 
     if (options) settings = options;

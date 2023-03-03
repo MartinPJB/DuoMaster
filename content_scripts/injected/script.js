@@ -44,6 +44,7 @@ async function completeChallenge(duoMasterSettings) {
 	console.debug("Lesson completed! 🎉");
 }
 
+
 // Main script
 async function main() {
 	// Get the settings from the page
@@ -57,6 +58,7 @@ async function main() {
 			humanChooseSpeedRange: [500, 900],
 			humanTypeSpeedRange: [50, 300],
 			autoskip: false,
+			autoPractice: false,
 		};
 	} else {
 		console.debug("Settings found! 📝");
@@ -64,10 +66,29 @@ async function main() {
 		settings.debug = duoMasterSettings.debug;
 	}
 
+
 	// Check if the current page is a lesson page
 	if (settings.lessonPages.includes(settings.currentURL)) {
 		console.debug("Current page is a lesson page. 📖");
 		completeChallenge(duoMasterSettings);
+	}
+
+
+	// Tries to auto launch the practice mode if enabled
+	if (duoMasterSettings.autoPractice) {
+		console.debug("Auto practice mode is enabled. 🤖");
+		const practiceButton = document.querySelector("[data-test='global-practice']");
+		if (practiceButton) {
+			// Waits a few second to not spam, then click the button
+			// If human feels, wait between 5 and 10 seconds
+			const randomWait = Math.random() * 10000;
+			await new Promise((resolve) => setTimeout(resolve, duoMasterSettings.humanFeel ? randomWait : 3000));
+
+			console.debug("Auto starting the practice mode. 🚀");
+			practiceButton.click();
+		} else {
+			console.debug("Couldn't find the practice button. 🤔");
+		}
 	}
 }
 

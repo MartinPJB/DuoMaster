@@ -8,7 +8,8 @@
 		"storage"
 	],
 	"background": {
-		"service_worker": "background.js"
+		"service_worker": "background.js",
+		"type": "module"
 	},
 	"action": {
 		"default_popup": "popup/popup.html",
@@ -38,7 +39,8 @@
 			],
 			"resources": [
 				"content_scripts/*.js",
-				"content_scripts/*/*.js"
+				"content_scripts/*/*.js",
+				"include/*.js"
 			]
 		}
 	]

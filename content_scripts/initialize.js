@@ -1,19 +1,12 @@
-/**
- * Gets a value from chrome.storage.local asynchronously.
- * @param {String} key - The key to get from chrome.storage.local.
- * @returns {Promise} - A promise that resolves with the value.
- */
-async function chromeStorageGetAsync(key) {
-	return new Promise((resolve, reject) => {
-		chrome.storage.local.get([key], function (result) {
-			if (result[key] === undefined) {
-				reject();
-			} else {
-				resolve(result[key]);
-			}
-		});
+// Imports the chromeStorageGetAsync function from functions.js
+// Why doesn't content_scripts use basic ES6 imports? Maybe I should consider using webpack.
+function importModule(path) {
+	return new Promise(async (resolve, reject) => {
+		const src = chrome.runtime.getURL(path);
+		const content = await import(src);
+		resolve(content);
 	});
-};
+}
 
 /**
  * Injects the duomaster file into the current page.
@@ -32,7 +25,7 @@ function injectDuoMaster(settings) {
 	// Injects the script
 	const script = document.createElement("script");
 	script.type = "module";
-	script.src = `chrome-extension://${chrome.runtime.id}/content_scripts/injected/script.js`;
+	script.src = chrome.runtime.getURL("/content_scripts/injected/script.js");
 	document.body.appendChild(script);
 }
 
@@ -40,6 +33,8 @@ function injectDuoMaster(settings) {
 chrome.storage.local.get("DuoMasterEnabled", async ({ DuoMasterEnabled }) => {
 	// If enabled
 	if (DuoMasterEnabled) {
+		const { chromeStorageGetAsync } = await importModule("/include/functions.js");
+
 		const settings = await chromeStorageGetAsync("DuoMasterSettings");
 		injectDuoMaster(settings);
 	}
