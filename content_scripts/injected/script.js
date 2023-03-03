@@ -1,86 +1,137 @@
 // Script settings
 const settings = {
-	debug: true,
+	debug: false,
 	lessonPages: [
 		"https://www.duolingo.com/lesson",
 		"https://www.duolingo.com/practice",
 		"https://www.duolingo.com/skill",
 		"https://www.duolingo.com/challenge",
 	],
+	challengeSolving: false, // Rather a challenge is being solved or not
 	currentURL: "",
 };
 
 // Import required modules
-import DuoMasterCompleter from "../DuoMasterCompleter.js";
+import DuoMasterCompleter from "../duoMasterCompleter.js";
 
 // Custom console log function for the debug
 const frame = document.body.appendChild(document.createElement("iframe"));
 frame.style.display = "none";
 
-const debug = settings.debug
-	? (...content) => frame.contentWindow.console.log("DEBUG>", ...content)
-	: () => {};
+const debug = (...content) => settings.debug ? frame.contentWindow.console.log("DEBUG>", ...content) : null;
 console.debug = debug;
-console.debug("DuoMaster has loaded. 🚀");
+frame.contentWindow.console.log("DuoMaster has loaded. 🚀");
+
+
+async function completeChallenge(duoMasterSettings) {
+	// Start the completer to complete the challenge
+	if (settings.challengeSolving) return;
+	const completer = new DuoMasterCompleter(duoMasterSettings);
+	await completer.start();
+
+	// Solve the challenge when called
+	settings.challengeSolving = true;
+	do {
+		try {
+			await completer.resolveChallenge();
+		} catch (error) {
+			settings.challengeSolving = false;
+		}
+	} while (settings.challengeSolving && settings.lessonPages.includes(settings.currentURL));
+	settings.challengeSolving = false;
+
+	// Woohoo
+	console.debug("Lesson completed or ended by the user! 🎉");
+}
 
 
 // Main script
 async function main() {
-
-	// Check if the current page is a lesson page
-	if (settings.lessonPages.includes(settings.currentURL)) {
-		console.debug("Current page is a lesson page. 📖");
-		const completer = new DuoMasterCompleter({
-			humanFeel: true,
+	// Get the settings from the page
+	let duoMasterSettings = document.getElementById("duomaster-settings") ? JSON.parse(atob(document.getElementById("duomaster-settings").value)) : null;
+	if (!duoMasterSettings) {
+		console.debug("Couldn't find the settings. 🤔");
+		console.debug("DuoMaster will use the default settings. 📝");
+		duoMasterSettings = {
+			humanLike: true,
 			robotSpeed: 500,
 			humanChooseSpeedRange: [500, 900],
 			humanTypeSpeedRange: [50, 300],
 			autoskip: false,
-		});
-
-		await completer.start();
-		console.debug("Lesson ended! 🎉");
+			autoPractice: false,
+		};
+	} else {
+		console.debug("Settings found! 📝");
+		console.debug(`Settings: ${JSON.stringify(duoMasterSettings)}`);
+		settings.debug = duoMasterSettings.debug;
 	}
 
-	// Add a link in the duolingo sidebar to the extension's options page
-	const sidebar = document.querySelector("._1AGG_._3bTT7");
-	if (sidebar && !sidebar.querySelector("#duomaster_link")) {
-		// Get the chrome extension ID
-		const imageLink = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4NCiAgICA8cGF0aCBkPSJNMyA3Ljc1QzMgNS42Nzg5MyA0LjY3ODkzIDQgNi43NSA0SDI0LjI1QzI2LjMyMTEgNCAyOCA1LjY3ODkzIDI4IDcuNzVWMjUuMjVDMjggMjcuMzIxMSAyNi4zMjExIDI5IDI0LjI1IDI5SDYuNzVDNC42Nzg5MyAyOSAzIDI3LjMyMTEgMyAyNS4yNVY3Ljc1WiIgZmlsbD0iIzRCNEI0QiIvPg0KICAgIDxwYXRoIGQ9Ik02Ljc1IDI0QzYuNzUgMjIuNjE5MyA3Ljg2OTI5IDIxLjUgOS4yNSAyMS41SDIxLjc1QzIzLjEzMDcgMjEuNSAyNC4yNSAyMi42MTkzIDI0LjI1IDI0QzI0LjI1IDI1LjM4MDcgMjMuMTMwNyAyNi41IDIxLjc1IDI2LjVIOS4yNUM3Ljg2OTI5IDI2LjUgNi43NSAyNS4zODA3IDYuNzUgMjRaIiBmaWxsPSIjRjdGN0Y3Ii8+DQogICAgPHBhdGggZD0iTTIwLjUgOUMyMC41IDcuNjE5MjkgMjEuNjE5MyA2LjUgMjMgNi41QzI0LjM4MDcgNi41IDI1LjUgNy42MTkyOSAyNS41IDlDMjUuNSAxMC4zODA3IDI0LjM4MDcgMTEuNSAyMyAxMS41QzIxLjYxOTMgMTEuNSAyMC41IDEwLjM4MDcgMjAuNSA5WiIgZmlsbD0iI0ZGQzgwMCIvPg0KPC9zdmc+DQo=";
+	// Check if the current page is a lesson page
+	if (settings.lessonPages.includes(settings.currentURL)) {
+		console.debug("Current page is a lesson page. 📖");
 
-		// Define the HTML to append
-		const htmlToAppend = `<div id="duomaster_link">
-			<a class="_3zmPR" href="/duomaster_settings">
-				<span class="p4XC6 _3BxbA _2q30B _2GojZ _3WEdM _1YI3x _3G8Us">
-				<div class="eMutd"><img class="PtT-7 ZFBAG" src='${imageLink}'>
-				</div>
-				<span class="_1lJDk">DuoMaster</span>
-			</span>
-		</a></div>`;
-		sidebar.insertAdjacentHTML("beforeend", htmlToAppend);
+		// Deletes the splash screen if exists
+		const splashScreen = document.querySelector(".duomaster-splash-screen");
+		if (splashScreen) {
+			document.body.removeChild(splashScreen);
+		}
+
+		return completeChallenge(duoMasterSettings);
 	}
 
+	// Tries to auto launch the practice mode if enabled
+	if (duoMasterSettings.autoPractice) {
+		console.debug("Auto practice mode is enabled. 🤖");
+		const practiceButton = document.querySelector("[data-test='global-practice']");
 
-	return;
+		// Waits until the practice button is found
+		console.debug("Waiting for the practice button to appear... 🕒");
+		if (!practiceButton) {
+			await new Promise(resolve => setTimeout(resolve, 200));
+		}
+		console.debug("Practice button found! 🎉");
+
+		// If human feels, wait between 5 and 10 seconds before clicking the button
+		const waitingTime = duoMasterSettings.humanLike ? Math.random() * (10000 - 5000 + 1) + 5000 : 3000;
+
+		// Adds a class to the body to hide the overflow
+		document.body.classList.add("duomaster-autoPractice");
+
+		// Adds a kind of splash screen to warn the user he has the auto practice mode enabled
+		// Sets the container of that splash screen
+		const splashScreen = document.createElement("div");
+		splashScreen.classList.add("duomaster-splash-screen");
+
+		// Sets the title and the text of the splash screen
+		const splashScreenTitle = document.createElement("h1");
+		const splashScreenText = document.createElement("p");
+
+		splashScreenTitle.innerHTML = `Auto practice mode <span>enabled</span>!`;
+		splashScreenText.innerText = `DuoMaster will start the practice mode automatically in ${Math.floor(waitingTime / 1000)} seconds. You can disable this feature in the settings.\n\nIf the "Human Like" option is enabled, the time will be random between 5 and 10 seconds. If not, it will be 3 seconds.`;
+
+		// // Adds the splash screen to the page
+		splashScreen.appendChild(splashScreenTitle);
+		splashScreen.appendChild(splashScreenText);
+		document.body.appendChild(splashScreen);
+
+		// Waits a few second to not spam, then click the button
+		await new Promise((resolve) => setTimeout(resolve, waitingTime));
+
+		console.debug("Auto starting the practice mode. 🚀");
+		practiceButton.click();
+	}
 }
 
 // Watch for URL changes
 function watchURLChanges() {
-	// Check if the current URL is different from the previous one
-	if (settings.currentURL !== window.location.href) {
-		settings.currentURL = window.location.href;
-		console.debug("URL changed to", window.location.href, "🕯️");
-		return main(); // Rerun the main script
-	}
+	const observer = new MutationObserver((mutations) => {
+		const url = window.location.href;
+		if (url !== settings.currentURL) {
+			settings.currentURL = url;
+			console.debug(`URL changed to ${url} 🕯️`);
+			main(); // Runs main script
+		}
+	});
+	observer.observe(document, { subtree: true, childList: true });
 }
-
-document.body.addEventListener(
-	"click",
-	() => {
-		requestAnimationFrame(() => {
-			watchURLChanges();
-		});
-	},
-	true
-);
 watchURLChanges();

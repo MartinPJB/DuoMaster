@@ -1,11 +1,27 @@
+import { chromeStorageGetAsync } from "./include/functions.js";
+
 // Function: Handle the installation of the extension and the storage changes
-function handleInstall() {
+async function handleInstall() {
     console.log("DuoMasterEnabled is ready to use 🚀");
+    const options = await chromeStorageGetAsync("DuoMasterSettings");
+    let settings = {
+        humanLike: false,
+        robotSpeed: 200,
+        humanChooseSpeedRange: [500, 900],
+        humanTypeSpeedRange: [50, 300],
+        autoskip: true,
+        debug: false,
+        autoPractice: false,
+    }
+
+    if (options) settings = options;
     chrome.storage.local.set({
-        DuoMasterEnabled: true
+        DuoMasterEnabled: true,
+        DuoMasterSettings: settings
     });
 
-    handleStorage({ DuoMasterEnabled: { newValue: true } }, "local");
+    chrome.action.setBadgeText({ text: "ON" });
+    chrome.action.setBadgeBackgroundColor({ color: "#58cc02" });
 }
 
 // Function: Handle the storage changes and update the badge depending on the value
