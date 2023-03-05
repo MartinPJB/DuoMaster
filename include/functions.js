@@ -12,7 +12,7 @@ async function chromeStorageGetAsync(key) {
 	return new Promise((resolve, reject) => {
 		chrome.storage.local.get([key], function (result) {
 			if (result[key] === undefined) {
-				reject();
+				resolve(null);
 			} else {
 				resolve(result[key]);
 			}
