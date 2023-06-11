@@ -202,6 +202,8 @@ export default class DuoMasterCompleter extends ReactUtils {
 
 			form: async () => { return await this.commonChallengeFunctions.chooseCorrectElement("challenge-choice", this.currentChallenge.correctIndex) },
 
+			gapFill: async () => { return await this.commonChallengeFunctions.chooseCorrectElement("challenge-choice", this.currentChallenge.correctIndex) },
+
 			judge: async () => { return await this.commonChallengeFunctions.chooseCorrectElement("challenge-judge-text", this.currentChallenge.correctIndices[0]) },
 
 			selectTranscription: async () => { return await this.commonChallengeFunctions.chooseCorrectElement("challenge-judge-text", this.currentChallenge.correctIndex) },
